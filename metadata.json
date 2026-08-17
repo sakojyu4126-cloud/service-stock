@@ -1,0 +1,6 @@
+{
+  "name": "物品・備品・衛生用品在庫管理システム",
+  "description": "事業所内の備蓄、消耗品、衛生用品の払い出しを管理し、月間請求処理（15日締め2割増）やBCP法定備蓄アラートに対応したシステムです。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

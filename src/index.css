@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "BIZ UDPGothic", "BIZ+UDPGothic", "BIZ UDPゴシック", "Meiryo UI", "Meiryo", sans-serif;
+  --font-display: "BIZ UDPGothic", "BIZ+UDPGothic", "BIZ UDPゴシック", "Meiryo UI", "Meiryo", sans-serif;
+  --font-mono: "Meiryo UI", "Meiryo", "BIZ UDPGothic", monospace;
+
+  --color-pink-500: #FF94C7;
+  --color-pink-600: #E685B3;
+  --color-lime-500: #5EFF5E;
+  --color-lime-600: #4CE64C;
+}
+
+/* Custom glow animations and aesthetic helpers */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.4)); }
+  50% { opacity: 0.8; transform: scale(1.02); filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.8)); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
