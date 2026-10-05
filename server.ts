@@ -6,8 +6,49 @@ import { createServer as createViteServer } from "vite";
 const app = express();
 const PORT = 3000;
 const DATA_FILE = path.join(process.cwd(), "data-store.json");
+const BACKUP_FILE = path.join(process.cwd(), "data-store-backup.json");
+const MASTER_TEMPLATE_FILE = path.join(process.cwd(), "data-store-master-template.json");
 
 app.use(express.json());
+
+// Anti-Loop & Quota Protection Middleware
+// Prevents infinite loops or runaway clients hitting limits (e.g. 50,000 req/day quota)
+const requestTracker = new Map<string, { count: number; windowStart: number }>();
+let serverDailyRequestCount = 0;
+let lastResetDateStr = new Date().toISOString().substring(0, 10);
+
+app.use((req, res, next) => {
+  const today = new Date().toISOString().substring(0, 10);
+  if (today !== lastResetDateStr) {
+    lastResetDateStr = today;
+    serverDailyRequestCount = 0;
+  }
+  serverDailyRequestCount++;
+
+  if (req.path.startsWith("/api")) {
+    const clientKey = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "client");
+    const now = Date.now();
+    const entry = requestTracker.get(clientKey) || { count: 0, windowStart: now };
+
+    if (now - entry.windowStart > 10000) {
+      // 10-second rolling window
+      entry.count = 1;
+      entry.windowStart = now;
+    } else {
+      entry.count++;
+    }
+    requestTracker.set(clientKey, entry);
+
+    // Safeguard: throttle if a client sends > 40 API requests within 10 seconds
+    if (entry.count > 40) {
+      console.warn(`[API Rate Limit] Excess calls blocked from ${clientKey} (${entry.count} in 10s)`);
+      res.setHeader("Retry-After", "5");
+      return res.status(429).json({ error: "アクセスが集中しています。5秒後に再試行してください。（ループ防止保護）" });
+    }
+  }
+
+  next();
+});
 
 // Helper function to calculate tax-excluded price and selling price (20% markup)
 function calculatePrices(priceInclTax: number) {
@@ -37,7 +78,7 @@ function getBillingMonth(dateStr: string): string {
 const initialProducts = [
   { id: "p1", maker: "リフレ", category: "尿取りパット類", name: "スピードキャッチパッド スーパー(10回吸収)", capacity: "30枚", size: "-", priceInclTax: 2273, priceExclTax: 2066, sellingPrice: 2480, currentStock: 12 },
   { id: "p2", maker: "いちばん", category: "リハビリパンツ", name: "幅広フィット テープ止めタイプ", capacity: "20枚", size: "M", priceInclTax: 1618, priceExclTax: 1471, sellingPrice: 1765, currentStock: 5 },
-  { id: "p3", maker: "リフレ", category: "リハビリパンツ", name: "はくパンツ 軽やかなうす型", capacity: "34枚", size: "M", priceInclTax: 2205, priceExclTax: 2005, sellingPrice: 2406, currentStock: 0 },
+  { id: "p3", maker: "リフレ", category: "リハビリパンツ", name: "はくパンツ 軽やかなうす型", capacity: "34枚", size: "M", priceInclTax: 2205, priceExclTax: 2005, sellingPrice: 2406, currentStock: 8 },
   { id: "p4", maker: "リフレ", category: "テープ止めオムツ", name: "簡単テープ止めタイプ", capacity: "30枚", size: "M", priceInclTax: 2965, priceExclTax: 2695, sellingPrice: 3235, currentStock: 2 },
   { id: "p5", maker: "DAFI", category: "流せるおしりふき", name: "流せるおしりふき 大人用", capacity: "80枚", size: "-", priceInclTax: 594, priceExclTax: 540, sellingPrice: 648, currentStock: 15 },
   { id: "p6", maker: "アテント", category: "尿取りパット類", name: "夜安心4回尿取りパット", capacity: "28枚", size: "-", priceInclTax: 1357, priceExclTax: 1234, sellingPrice: 1480, currentStock: 1 },
@@ -125,6 +166,7 @@ async function readDatabase() {
     const raw = await fs.readFile(DATA_FILE, "utf-8");
     const parsed = JSON.parse(raw);
     let modified = false;
+
     if (!parsed.users || parsed.users.length === 0) {
       parsed.users = [...initialUsers];
       modified = true;
@@ -137,8 +179,40 @@ async function readDatabase() {
       parsed.staffWithdrawals = [];
       modified = true;
     }
-    if (!parsed.stockpiles) {
-      parsed.stockpiles = [];
+    if (!parsed.withdrawals) {
+      parsed.withdrawals = [...initialWithdrawals];
+      modified = true;
+    }
+
+    // --- Ensure 14 Products Master Catalog ---
+    if (!parsed.products || !Array.isArray(parsed.products) || parsed.products.length === 0) {
+      parsed.products = JSON.parse(JSON.stringify(initialProducts));
+      modified = true;
+    } else {
+      // Ensure all 14 standard products exist
+      for (const p of initialProducts) {
+        const exists = parsed.products.some((existing: any) => 
+          existing.id === p.id || 
+          (normalizeName(existing.name) === normalizeName(p.name) && existing.category === p.category)
+        );
+        if (!exists) {
+          parsed.products.push({ ...p });
+          modified = true;
+        }
+      }
+    }
+
+    parsed.products.forEach((p: any) => {
+      if (typeof p.currentStock !== "number" || isNaN(p.currentStock) || p.currentStock < 0) {
+        const orig = initialProducts.find(ip => ip.id === p.id || ip.name === p.name);
+        p.currentStock = orig ? orig.currentStock : 10;
+        modified = true;
+      }
+    });
+
+    // --- Ensure 40 Stockpiles (BCP) Catalog ---
+    if (!parsed.stockpiles || !Array.isArray(parsed.stockpiles) || parsed.stockpiles.length === 0) {
+      parsed.stockpiles = JSON.parse(JSON.stringify(initialStockpiles));
       modified = true;
     }
 
@@ -220,6 +294,11 @@ async function readDatabase() {
           s.id = expectedId;
           modified = true;
         }
+        if (typeof s.currentStock !== "number" || isNaN(s.currentStock) || s.currentStock < 0) {
+          const orig = initialStockpiles.find(is => is.name === s.name || is.id === s.id);
+          s.currentStock = orig ? orig.currentStock : 10;
+          modified = true;
+        }
       });
     }
 
@@ -250,6 +329,146 @@ app.get("/api/data", async (req, res) => {
   try {
     const data = await readDatabase();
     res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Backup & Restore APIs (管理者専用: データ保存・データ復元) ---
+
+// 1. Export entire DB as downloadable JSON
+app.get("/api/backup/export", async (req, res) => {
+  try {
+    const db = await readDatabase();
+    const dateStr = new Date().toISOString().substring(0, 10);
+    res.setHeader("Content-Disposition", `attachment; filename="momo_backup_${dateStr}.json"`);
+    res.setHeader("Content-Type", "application/json");
+    res.json({
+      exportedAt: new Date().toISOString(),
+      productsCount: db.products?.length || 0,
+      stockpilesCount: db.stockpiles?.length || 0,
+      withdrawalsCount: db.withdrawals?.length || 0,
+      data: db
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. Save server snapshot (データ保存)
+app.post("/api/backup/save", async (req, res) => {
+  try {
+    const db = await readDatabase();
+    const snapshot = {
+      savedAt: new Date().toISOString(),
+      savedBy: req.body?.staffName || "管理者",
+      productsCount: db.products?.length || 0,
+      stockpilesCount: db.stockpiles?.length || 0,
+      withdrawalsCount: db.withdrawals?.length || 0,
+      data: db
+    };
+    await fs.writeFile(BACKUP_FILE, JSON.stringify(snapshot, null, 2), "utf-8");
+    res.json({
+      message: `データを保存しました（BCP備蓄${db.stockpiles?.length}品目・販売物品${db.products?.length}品目・履歴${db.withdrawals?.length}件）`,
+      savedAt: snapshot.savedAt,
+      data: db
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. Check status of last saved snapshot
+app.get("/api/backup/status", async (req, res) => {
+  try {
+    const raw = await fs.readFile(BACKUP_FILE, "utf-8");
+    const snapshot = JSON.parse(raw);
+    res.json({
+      hasBackup: true,
+      savedAt: snapshot.savedAt,
+      savedBy: snapshot.savedBy,
+      productsCount: snapshot.productsCount || snapshot.data?.products?.length || 0,
+      stockpilesCount: snapshot.stockpilesCount || snapshot.data?.stockpiles?.length || 0
+    });
+  } catch {
+    res.json({ hasBackup: false });
+  }
+});
+
+// 4. Restore from JSON data (ファイル復元 / クライアントバックアップ復元)
+app.post("/api/backup/restore", async (req, res) => {
+  try {
+    let payload = req.body?.data || req.body;
+    if (typeof payload === "string") {
+      try {
+        payload = JSON.parse(payload);
+      } catch {
+        return res.status(400).json({ error: "JSONフォーマットが不正です" });
+      }
+    }
+    // Unwrap if nested in { data: ... }
+    if (payload.data && typeof payload.data === "object") {
+      payload = payload.data;
+    }
+
+    if (!payload || typeof payload !== "object") {
+      return res.status(400).json({ error: "有効なバックアップデータが指定されていません" });
+    }
+
+    const newDb = {
+      products: Array.isArray(payload.products) && payload.products.length > 0 ? payload.products : JSON.parse(JSON.stringify(initialProducts)),
+      stockpiles: Array.isArray(payload.stockpiles) && payload.stockpiles.length > 0 ? payload.stockpiles : JSON.parse(JSON.stringify(initialStockpiles)),
+      withdrawals: Array.isArray(payload.withdrawals) ? payload.withdrawals : [],
+      users: Array.isArray(payload.users) && payload.users.length > 0 ? payload.users : [...initialUsers],
+      staff: Array.isArray(payload.staff) && payload.staff.length > 0 ? payload.staff : [...initialStaff],
+      staffWithdrawals: Array.isArray(payload.staffWithdrawals) ? payload.staffWithdrawals : []
+    };
+
+    await writeDatabase(newDb);
+    res.json({
+      message: `データを正常に復元しました（BCP備蓄${newDb.stockpiles.length}品目、販売物品${newDb.products.length}品目）`,
+      data: newDb
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. Restore from server snapshot (直近の保存データから復元)
+app.post("/api/backup/restore-snapshot", async (req, res) => {
+  try {
+    const raw = await fs.readFile(BACKUP_FILE, "utf-8");
+    const snapshot = JSON.parse(raw);
+    const dbToRestore = snapshot.data || snapshot;
+    await writeDatabase(dbToRestore);
+    res.json({
+      message: `直近の保存データ（${new Date(snapshot.savedAt).toLocaleString("ja-JP")} 保存分）から正常に復元しました`,
+      savedAt: snapshot.savedAt,
+      data: dbToRestore
+    });
+  } catch {
+    res.status(404).json({ error: "保存データが見つかりません。先に「データ保存」を行ってください。" });
+  }
+});
+
+// 6. Restore standard master defaults (公式マスターデータに復元: BCP40品目 & 販売物品14品目)
+app.post("/api/backup/restore-master", async (req, res) => {
+  try {
+    const current = await readDatabase();
+    // Keep user names and withdrawal histories, reset products and stockpiles to full pristine master
+    const masterDb = {
+      products: JSON.parse(JSON.stringify(initialProducts)),
+      stockpiles: JSON.parse(JSON.stringify(initialStockpiles)),
+      withdrawals: current.withdrawals || [],
+      users: current.users && current.users.length > 0 ? current.users : [...initialUsers],
+      staff: current.staff && current.staff.length > 0 ? current.staff : [...initialStaff],
+      staffWithdrawals: current.staffWithdrawals || []
+    };
+    await writeDatabase(masterDb);
+    res.json({
+      message: `公式マスターデータ（BCP備蓄40品目・販売物品14品目）を完全に復元しました`,
+      data: masterDb
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

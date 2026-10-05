@@ -24,15 +24,101 @@ import {
   Clock,
   ExternalLink,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Download,
+  Upload,
+  Database,
+  Save,
+  ShieldAlert
 } from "lucide-react";
 import { Product, Withdrawal, Stockpile, ActiveTab } from "./types";
 
+// Standard master items guaranteed to exist and display
+const DEFAULT_PRODUCTS: Product[] = [
+  { id: "p1", maker: "リフレ", category: "尿取りパット類", name: "スピードキャッチパッド スーパー(10回吸収)", capacity: "30枚", size: "-", priceInclTax: 2273, priceExclTax: 2066, sellingPrice: 2480, currentStock: 12 },
+  { id: "p2", maker: "いちばん", category: "リハビリパンツ", name: "幅広フィット テープ止めタイプ", capacity: "20枚", size: "M", priceInclTax: 1618, priceExclTax: 1471, sellingPrice: 1765, currentStock: 5 },
+  { id: "p3", maker: "リフレ", category: "リハビリパンツ", name: "はくパンツ 軽やかなうす型", capacity: "34枚", size: "M", priceInclTax: 2205, priceExclTax: 2005, sellingPrice: 2406, currentStock: 8 },
+  { id: "p4", maker: "リフレ", category: "テープ止めオムツ", name: "簡単テープ止めタイプ", capacity: "30枚", size: "M", priceInclTax: 2965, priceExclTax: 2695, sellingPrice: 3235, currentStock: 2 },
+  { id: "p5", maker: "DAFI", category: "流せるおしりふき", name: "流せるおしりふき 大人用", capacity: "80枚", size: "-", priceInclTax: 594, priceExclTax: 540, sellingPrice: 648, currentStock: 15 },
+  { id: "p6", maker: "アテント", category: "尿取りパット類", name: "夜安心4回尿取りパット", capacity: "28枚", size: "-", priceInclTax: 1357, priceExclTax: 1234, sellingPrice: 1480, currentStock: 1 },
+  { id: "p7", maker: "リフレ", category: "尿取りパット類", name: "パッドタイプ 男女兼用 レギュラー", capacity: "30枚", size: "-", priceInclTax: 620, priceExclTax: 564, sellingPrice: 676, currentStock: 8 },
+  { id: "p8", maker: "アクティ", category: "流せるおしりふき", name: "おしりふき 大容量 100枚 流せる", capacity: "100枚", size: "-", priceInclTax: 594, priceExclTax: 540, sellingPrice: 648, currentStock: 10 },
+  { id: "p9-s", maker: "西川", category: "PVC介護手袋", name: "PVC介護用使い捨て手袋 S", capacity: "100枚", size: "S", priceInclTax: 980, priceExclTax: 891, sellingPrice: 1070, currentStock: 10 },
+  { id: "p9-m", maker: "西川", category: "PVC介護手袋", name: "PVC介護用使い捨て手袋 M", capacity: "100枚", size: "M", priceInclTax: 980, priceExclTax: 891, sellingPrice: 1070, currentStock: 24 },
+  { id: "p9-l", maker: "西川", category: "PVC介護手袋", name: "PVC介護用使い捨て手袋 L", capacity: "100枚", size: "L", priceInclTax: 980, priceExclTax: 891, sellingPrice: 1070, currentStock: 12 },
+  { id: "p10", maker: "白十字", category: "リハビリパンツ", name: "やわ楽 リハビリパンツ", capacity: "34枚", size: "M-L", priceInclTax: 1648, priceExclTax: 1498, sellingPrice: 1798, currentStock: 3 },
+  { id: "p11", maker: "マーヤ", category: "尿取りパット類", name: "超吸収 大パット1200", capacity: "30枚", size: "-", priceInclTax: 1455, priceExclTax: 1323, sellingPrice: 1587, currentStock: 2 },
+  { id: "p12", maker: "マーヤ", category: "尿取りパット類", name: "夜長時間用 尿取りパット", capacity: "30枚", size: "-", priceInclTax: 1029, priceExclTax: 935, sellingPrice: 1123, currentStock: 1 }
+];
+
+const DEFAULT_STOCKPILES: Stockpile[] = [
+  { id: "s1", name: "PVC使い捨て手袋S", currentStock: 10, requiredStock: 10, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーS", alertDismissed: false },
+  { id: "s2", name: "PVC使い捨て手袋M", currentStock: 40, requiredStock: 40, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーM", alertDismissed: false },
+  { id: "s3", name: "PVC使い捨て手袋L", currentStock: 15, requiredStock: 15, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーL", alertDismissed: false },
+  { id: "s4", name: "流せるお尻拭き", currentStock: 20, requiredStock: 20, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "日常業務用おしりふき", alertDismissed: false },
+  { id: "s5", name: "次亜塩素酸ナトリウム（12％）", currentStock: 3, requiredStock: 3, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "消毒・除菌剤", alertDismissed: false },
+  { id: "s6", name: "消毒用アルコール（10L）", currentStock: 5, requiredStock: 5, unit: "箱", location: "5番館倉庫", manager: "事務員", notes: "大容量10L", alertDismissed: false },
+  { id: "s7", name: "消毒用アルコール（スプレー）", currentStock: 15, requiredStock: 15, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "各フロア設置用", alertDismissed: false },
+  { id: "s8", name: "消毒用アルコール（5L）", currentStock: 5, requiredStock: 5, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "大容量5L", alertDismissed: false },
+  { id: "s9", name: "抗原検査キット", currentStock: 100, requiredStock: 100, unit: "キット", location: "5番館倉庫", manager: "管理職", notes: "コロナ・インフル両方対応", alertDismissed: false },
+  { id: "s10", name: "マスク（N95高機能マスク）", currentStock: 200, requiredStock: 200, unit: "枚", location: "5番館倉庫", manager: "管理職", notes: "医療・感染用", alertDismissed: false },
+  { id: "s11", name: "マスク（不織布）", currentStock: 500, requiredStock: 500, unit: "枚", location: "5番館倉庫", manager: "事務員", notes: "日常業務・来客用", alertDismissed: false },
+  { id: "s12", name: "体温計（腋下）", currentStock: 10, requiredStock: 10, unit: "本", location: "桃の郷事務所", manager: "看護スタッフ", notes: "接触型通常タイプ", alertDismissed: false },
+  { id: "s13", name: "体温計（非接触型）", currentStock: 5, requiredStock: 5, unit: "本", location: "桃の郷事務所", manager: "看護スタッフ", notes: "検温用", alertDismissed: false },
+  { id: "s14", name: "パルスオキシメーター", currentStock: 5, requiredStock: 5, unit: "個", location: "桃の郷事務所", manager: "看護スタッフ", notes: "SpO2測定用", alertDismissed: false },
+  { id: "s15", name: "アルコール綿（個包装）", currentStock: 1000, requiredStock: 1000, unit: "個", location: "5番館倉庫", manager: "看護スタッフ", notes: "個包装（2枚入）", alertDismissed: false },
+  { id: "s16", name: "ガーゼ類", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "看護スタッフ", notes: "滅菌ガーゼ", alertDismissed: false },
+  { id: "s17", name: "ガウン（薄手）", currentStock: 200, requiredStock: 200, unit: "枚", location: "5番館倉庫", manager: "衛生担当", notes: "不織布簡易ガウン", alertDismissed: false },
+  { id: "s18", name: "ガウン（厚手）", currentStock: 100, requiredStock: 100, unit: "枚", location: "5番館倉庫", manager: "衛生担当", notes: "撥水フルプロテクション", alertDismissed: false },
+  { id: "s19", name: "フェイスシールド", currentStock: 80, requiredStock: 80, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "感染防止シールド", alertDismissed: false },
+  { id: "s20", name: "ゴーグル", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "保護メガネ", alertDismissed: false },
+  { id: "s21", name: "キャップ", currentStock: 200, requiredStock: 200, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "ヘアカバー", alertDismissed: false },
+  { id: "s22", name: "紙コップ", currentStock: 200, requiredStock: 200, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害・来客用", alertDismissed: false },
+  { id: "s23", name: "使い捨て食器（飯碗用）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 飯碗", alertDismissed: false },
+  { id: "s24", name: "使い捨て食器（汁物用）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 汁物", alertDismissed: false },
+  { id: "s25", name: "使い捨て食器（弁当スタイル）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 弁当", alertDismissed: false },
+  { id: "s26", name: "使い捨て食器（丼用）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 丼", alertDismissed: false },
+  { id: "s27", name: "中性洗剤（厨房用）", currentStock: 2, requiredStock: 2, unit: "箱", location: "5番館倉庫", manager: "事務員", notes: "厨房業務用", alertDismissed: false },
+  { id: "s28", name: "中性洗剤（強力）", currentStock: 5, requiredStock: 5, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "頑固な汚れ落とし用", alertDismissed: false },
+  { id: "s29", name: "ゴミ袋 大（45L）", currentStock: 50, requiredStock: 50, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "業務用45L", alertDismissed: false },
+  { id: "s30", name: "ゴミ袋 中（30L）", currentStock: 50, requiredStock: 50, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "業務用30L", alertDismissed: false },
+  { id: "s31", name: "薬用ハンドソープ（5L）", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "手洗い場詰替え用", alertDismissed: false },
+  { id: "s32", name: "手指消毒ジェル", currentStock: 20, requiredStock: 20, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "携帯・卓上用", alertDismissed: false },
+  { id: "s33", name: "ハイター", currentStock: 5, requiredStock: 5, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "漂白・除菌用", alertDismissed: false },
+  { id: "s34", name: "ウタマロ", currentStock: 5, requiredStock: 5, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "部分汚れ用", alertDismissed: false },
+  { id: "s35", name: "トイレクリーナー液（5L）", currentStock: 3, requiredStock: 3, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "トイレ清掃用", alertDismissed: false },
+  { id: "s36", name: "シャンプー／リンス", currentStock: 5, requiredStock: 5, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "利用者お風呂用", alertDismissed: false },
+  { id: "s37", name: "ボディソープ", currentStock: 5, requiredStock: 5, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "利用者お風呂用", alertDismissed: false },
+  { id: "s38", name: "トイレットペーパー", currentStock: 120, requiredStock: 120, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "消耗品", alertDismissed: false },
+  { id: "s39", name: "ハンドペーパー", currentStock: 250, requiredStock: 250, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "ペーパータオル", alertDismissed: false },
+  { id: "s40", name: "お風呂洗剤（4L）", currentStock: 3, requiredStock: 3, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "お風呂清掃用", alertDismissed: false }
+];
+
 export default function App() {
-  // Database States
-  const [products, setProducts] = useState<Product[]>([]);
+  // Database States - initialized with offline cached copy or fallback to ensure 0-item display bug never occurs
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      const cached = localStorage.getItem("momo_offline_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.products) && parsed.products.length > 0) return parsed.products;
+      }
+    } catch {}
+    return DEFAULT_PRODUCTS;
+  });
+
+  const [stockpiles, setStockpiles] = useState<Stockpile[]>(() => {
+    try {
+      const cached = localStorage.getItem("momo_offline_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.stockpiles) && parsed.stockpiles.length > 0) return parsed.stockpiles;
+      }
+    } catch {}
+    return DEFAULT_STOCKPILES;
+  });
+
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
-  const [stockpiles, setStockpiles] = useState<Stockpile[]>([]);
   const [users, setUsers] = useState<string[]>([]);
   const [staff, setStaff] = useState<string[]>([]);
   
@@ -156,39 +242,263 @@ export default function App() {
     });
   };
 
-  // Load and refresh logic
+  // --- Smart Sync & Anti-Loop Polling Logic ---
+  const lastFetchTimestampRef = useRef<number>(0);
+
   const fetchData = async (silent = false) => {
+    const nowMs = Date.now();
+    // Anti-hammering safeguard: do not allow fetches closer than 2.5 seconds apart
+    if (nowMs - lastFetchTimestampRef.current < 2500) return;
+    lastFetchTimestampRef.current = nowMs;
+
     if (!silent) setIsLoading(true);
     setIsSyncing(true);
     try {
       const res = await fetch("/api/data");
       if (!res.ok) throw new Error("データの取得に失敗しました");
       const data = await res.json();
-      setProducts(data.products || []);
+      if (Array.isArray(data.products) && data.products.length > 0) {
+        setProducts(data.products);
+      }
+      if (Array.isArray(data.stockpiles) && data.stockpiles.length > 0) {
+        setStockpiles(data.stockpiles);
+      }
       setWithdrawals(data.withdrawals || []);
-      setStockpiles(data.stockpiles || []);
       setUsers(data.users || []);
       setStaff(data.staff || []);
       setStaffWithdrawals(data.staffWithdrawals || []);
       
+      // Save local offline cache
+      try {
+        localStorage.setItem("momo_offline_cache", JSON.stringify(data));
+      } catch {}
+
       const now = new Date();
       setLastSyncTime(now.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     } catch (err) {
       console.error("Fetch error:", err);
+      // Fallback to local cache if available
+      try {
+        const cached = localStorage.getItem("momo_offline_cache");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed.products) && parsed.products.length > 0) setProducts(parsed.products);
+          if (Array.isArray(parsed.stockpiles) && parsed.stockpiles.length > 0) setStockpiles(parsed.stockpiles);
+        }
+      } catch {}
     } finally {
       setIsLoading(false);
       setIsSyncing(false);
     }
   };
 
-  // Poll database every 10 seconds for real-time synchronization between helper phone and office PC
+  // Poll database every 15 seconds ONLY when tab is visible to prevent 50,000 req/day quota exhaust
   useEffect(() => {
     fetchData();
+
     const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchData(true);
+      }
+    }, 15000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchData(true);
+      }
+    };
+
+    const handleFocus = () => {
       fetchData(true);
-    }, 10000);
-    return () => clearInterval(interval);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, []);
+
+  // --- Admin Backup & Restore States & Handlers ---
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [backupStatusInfo, setBackupStatusInfo] = useState<{
+    hasBackup: boolean;
+    savedAt?: string;
+    savedBy?: string;
+    productsCount?: number;
+    stockpilesCount?: number;
+  } | null>(null);
+  const [backupActionLoading, setBackupActionLoading] = useState(false);
+  const [backupFeedbackMsg, setBackupFeedbackMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const fetchBackupStatus = async () => {
+    try {
+      const res = await fetch("/api/backup/status");
+      if (res.ok) {
+        const data = await res.json();
+        setBackupStatusInfo(data);
+      }
+    } catch {}
+  };
+
+  // 1. Data Save (データ保存): Downloads JSON + creates server snapshot
+  const handleSaveData = async () => {
+    setBackupActionLoading(true);
+    setBackupFeedbackMsg(null);
+    try {
+      const currentStaff = staffInput || helper2StaffInput || "管理者";
+      const res = await fetch("/api/backup/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ staffName: currentStaff })
+      });
+      if (!res.ok) throw new Error("サーバーへのデータ保存に失敗しました");
+
+      // Trigger automatic file download as well for complete peace of mind
+      const exportRes = await fetch("/api/backup/export");
+      if (exportRes.ok) {
+        const blob = await exportRes.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const dateStr = new Date().toISOString().substring(0, 10);
+        a.href = url;
+        a.download = `momo_backup_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      setBackupFeedbackMsg({
+        type: "success",
+        text: `データ保存完了！サーバーへの安全保存と、PC/スマホへのバックアップファイル（JSON）保存が完了しました。（BCP40品目・販売物品14品目）`
+      });
+      fetchBackupStatus();
+      setShowBackupModal(true);
+    } catch (err: any) {
+      setBackupFeedbackMsg({ type: "error", text: err.message || "データ保存に失敗しました" });
+      setShowBackupModal(true);
+    } finally {
+      setBackupActionLoading(false);
+    }
+  };
+
+  // 2. Restore from server snapshot (直近の保存時点に復元)
+  const handleRestoreFromSnapshot = () => {
+    showConfirm(
+      "直近の保存データから復元",
+      "最後に「データ保存」した時点の状態に巻き戻します。よろしいですか？",
+      async () => {
+        setBackupActionLoading(true);
+        setBackupFeedbackMsg(null);
+        try {
+          const res = await fetch("/api/backup/restore-snapshot", { method: "POST" });
+          if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.error || "復元に失敗しました");
+          }
+          const result = await res.json();
+          setProducts(result.data.products);
+          setStockpiles(result.data.stockpiles);
+          setWithdrawals(result.data.withdrawals || []);
+          setUsers(result.data.users || []);
+          setStaff(result.data.staff || []);
+          setBackupFeedbackMsg({
+            type: "success",
+            text: `直近の保存時点にデータを巻き戻しました（BCP${result.data.stockpiles?.length}品目・販売${result.data.products?.length}品目）`
+          });
+        } catch (err: any) {
+          setBackupFeedbackMsg({ type: "error", text: err.message });
+        } finally {
+          setBackupActionLoading(false);
+        }
+      },
+      "復元を実行する"
+    );
+  };
+
+  // 3. Restore from selected file (JSONファイル読込)
+  const handleRestoreFromFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+        showConfirm(
+          "ファイルからデータ復元",
+          `ファイル「${file.name}」の内容でシステム全体を復元します。現在のデータは上書きされますがよろしいですか？`,
+          async () => {
+            setBackupActionLoading(true);
+            setBackupFeedbackMsg(null);
+            try {
+              const res = await fetch("/api/backup/restore", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ data: parsed })
+              });
+              if (!res.ok) {
+                const errJson = await res.json().catch(() => ({}));
+                throw new Error(errJson.error || "復元に失敗しました");
+              }
+              const result = await res.json();
+              setProducts(result.data.products);
+              setStockpiles(result.data.stockpiles);
+              setWithdrawals(result.data.withdrawals || []);
+              setUsers(result.data.users || []);
+              setStaff(result.data.staff || []);
+              setBackupFeedbackMsg({
+                type: "success",
+                text: `ファイルから正常に復元しました！（BCP備蓄${result.data.stockpiles?.length}品目・販売物品${result.data.products?.length}品目）`
+              });
+            } catch (err: any) {
+              setBackupFeedbackMsg({ type: "error", text: err.message });
+            } finally {
+              setBackupActionLoading(false);
+            }
+          },
+          "復元を実行する"
+        );
+      } catch (err: any) {
+        setBackupFeedbackMsg({ type: "error", text: "無効なJSONファイルです: " + err.message });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  // 4. Restore official master defaults (BCP 40品目 & 販売物品14品目)
+  const handleRestoreMasterDefaults = () => {
+    showConfirm(
+      "公式マスターデータへの復元",
+      "全40品目のBCP備蓄品資材および14品目の利用者販売物品を公式マスターデータに復元します。（※利用者名や過去の請求履歴は保持されます）。よろしいですか？",
+      async () => {
+        setBackupActionLoading(true);
+        setBackupFeedbackMsg(null);
+        try {
+          const res = await fetch("/api/backup/restore-master", { method: "POST" });
+          if (!res.ok) throw new Error("マスター復元に失敗しました");
+          const result = await res.json();
+          setProducts(result.data.products);
+          setStockpiles(result.data.stockpiles);
+          setBackupFeedbackMsg({
+            type: "success",
+            text: `公式マスターデータ（BCP40品目・販売物品14品目）を完全に復元しました！`
+          });
+        } catch (err: any) {
+          setBackupFeedbackMsg({ type: "error", text: err.message });
+        } finally {
+          setBackupActionLoading(false);
+        }
+      },
+      "マスター復元する"
+    );
+  };
 
   // Click outside to close suggestion dropdowns
   useEffect(() => {
@@ -1035,12 +1345,28 @@ export default function App() {
           </div>
 
           <div className="flex items-center flex-wrap gap-2 text-xs">
-            {/* Quick reset */}
+            {/* Admin Data Save */}
             <button
-              onClick={handleResetDatabase}
-              className="bg-slate-900/10 hover:bg-slate-900/20 text-slate-900 px-3 py-1.5 rounded-full border border-slate-900/20 transition text-xs font-bold"
+              onClick={handleSaveData}
+              disabled={backupActionLoading}
+              className="bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white px-3 py-1.5 rounded-full shadow-xs transition text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              title="現在の全品目・在庫・履歴を安全に保存（バックアップ作成）します"
             >
-              初期化
+              <Save className="h-3.5 w-3.5" />
+              {backupActionLoading ? "保存中..." : "データ保存"}
+            </button>
+
+            {/* Admin Data Restore */}
+            <button
+              onClick={() => {
+                fetchBackupStatus();
+                setShowBackupModal(true);
+              }}
+              className="bg-slate-900/10 hover:bg-slate-900/20 text-slate-900 px-3 py-1.5 rounded-full border border-slate-900/20 transition text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              title="保存データまたはバックアップファイルからデータを復元します"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              データ復元
             </button>
 
             {/* Help Toggle */}
@@ -1759,6 +2085,37 @@ export default function App() {
         {activeTab === "billing" && (
           <div className="space-y-6">
             
+            {/* Admin Data Save / Restore Banner */}
+            <div className="bg-slate-900 text-white p-3.5 rounded-xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-emerald-400 shrink-0" />
+                <span className="font-bold">【管理者機能】データ保護・バックアップ管理</span>
+                <span className="text-[11px] text-slate-300 hidden md:inline">（万一品目データが消えた場合でも、いつでも1クリックで巻き戻せます）</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSaveData}
+                  disabled={backupActionLoading}
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  {backupActionLoading ? "保存中..." : "データ保存"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    fetchBackupStatus();
+                    setShowBackupModal(true);
+                  }}
+                  className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  データ復元
+                </button>
+              </div>
+            </div>
+
             {/* Table Filters & Toolbar */}
             <div className="bg-lime-50/40 p-4 rounded-xl shadow-sm border border-lime-200 space-y-4">
               
@@ -2208,6 +2565,37 @@ export default function App() {
                 </div>
               </div>
             )}
+
+            {/* Admin Data Save / Restore Banner */}
+            <div className="bg-slate-900 text-white p-3.5 rounded-xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-emerald-400 shrink-0" />
+                <span className="font-bold">【管理者機能】データ保護・バックアップ管理</span>
+                <span className="text-[11px] text-slate-300 hidden md:inline">（万一品目データが消えた場合でも、いつでも1クリックで巻き戻せます）</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSaveData}
+                  disabled={backupActionLoading}
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  {backupActionLoading ? "保存中..." : "データ保存"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    fetchBackupStatus();
+                    setShowBackupModal(true);
+                  }}
+                  className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  データ復元
+                </button>
+              </div>
+            </div>
 
             {/* Sub Tabs for Stockpile View */}
             <div className="flex border-b border-slate-200 bg-white p-1 rounded-lg shadow-xs">
@@ -3097,6 +3485,170 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Backup & Restore Modal (データ保存・データ復元) */}
+      {showBackupModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden border border-slate-200 animate-scale-up">
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <Database className="h-5 w-5 text-emerald-400" />
+                <div>
+                  <h3 className="text-base font-bold">【管理者機能】データ保存・データ復元</h3>
+                  <p className="text-[11px] text-slate-300">
+                    現在の全品目・在庫・出庫履歴を安全にバックアップし、万一の際に巻き戻せます
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowBackupModal(false);
+                  setBackupFeedbackMsg(null);
+                }}
+                className="text-slate-400 hover:text-white p-1 rounded-lg transition"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              {backupFeedbackMsg && (
+                <div
+                  className={`p-3.5 rounded-xl text-xs font-semibold flex items-start gap-2.5 border ${
+                    backupFeedbackMsg.type === "success"
+                      ? "bg-emerald-50 text-emerald-900 border-emerald-200"
+                      : "bg-rose-50 text-rose-900 border-rose-200"
+                  }`}
+                >
+                  {backupFeedbackMsg.type === "success" ? (
+                    <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                  )}
+                  <span className="leading-relaxed">{backupFeedbackMsg.text}</span>
+                </div>
+              )}
+
+              {/* Status Section */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">現在の登録状況:</span>
+                  <span className="font-bold text-slate-800">
+                    BCP備蓄品 <strong className="text-blue-600">{stockpiles.length}品目</strong> / 
+                    利用者販売品 <strong className="text-teal-600">{products.length}品目</strong> / 
+                    出庫履歴 <strong className="text-slate-900">{withdrawals.length}件</strong>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200">
+                  <span className="text-slate-500 font-medium">直近のサーバー保存（スナップショット）:</span>
+                  <span className="font-bold text-slate-700">
+                    {backupStatusInfo?.hasBackup && backupStatusInfo.savedAt
+                      ? `${new Date(backupStatusInfo.savedAt).toLocaleString("ja-JP")} (${backupStatusInfo.savedBy || "管理者"})`
+                      : "未保存（まだ保存されていません）"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action 1: Data Save */}
+              <div className="border border-emerald-200 bg-emerald-50/40 p-4 rounded-xl space-y-2.5">
+                <div>
+                  <h4 className="text-sm font-bold text-emerald-900 flex items-center gap-1.5">
+                    <Save className="h-4 w-4 text-emerald-600" />
+                    ① データを保存する（今すぐバックアップ作成）
+                  </h4>
+                  <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
+                    現在の全データ（40品目のBCP備蓄品、14品目の販売物品、利用履歴、利用者・職員名簿）をサーバーに安全に保管し、同時にPC/スマホへのバックアップ用JSONファイルをダウンロードします。
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveData}
+                  disabled={backupActionLoading}
+                  className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Download className="h-4 w-4" />
+                  {backupActionLoading ? "保存中..." : "今すぐデータを保存する（バックアップ）"}
+                </button>
+              </div>
+
+              {/* Action 2: Data Restore from Server Snapshot */}
+              <div className="border border-blue-200 bg-blue-50/40 p-4 rounded-xl space-y-2.5">
+                <h4 className="text-sm font-bold text-blue-900 flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-blue-600" />
+                  ② 直近の保存時点に巻き戻す（データ復元）
+                </h4>
+                <p className="text-xs text-blue-800 leading-relaxed">
+                  サーバーに保存されている直近のバックアップデータ時点にすべての品目・在庫数を巻き戻します。
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRestoreFromSnapshot}
+                  disabled={backupActionLoading}
+                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  直近の保存データから復元
+                </button>
+              </div>
+
+              {/* Action 3: Restore from JSON File */}
+              <div className="border border-slate-200 bg-slate-50/60 p-4 rounded-xl space-y-2.5">
+                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <Upload className="h-4 w-4 text-slate-600" />
+                  ③ 保存したバックアップファイル（JSON）から復元
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  過去に保存・ダウンロードしたバックアップJSONファイルを選択して、その時点の登録データへ完全に巻き戻します。
+                </p>
+                <label className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-bold text-xs shadow-xs transition cursor-pointer">
+                  <Upload className="h-3.5 w-3.5 text-slate-600" />
+                  JSONファイルを選択して復元
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleRestoreFromFile}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* Action 4: Restore Master Default (BCP 40 items + Sales 14 items) */}
+              <div className="border border-amber-200 bg-amber-50/40 p-4 rounded-xl space-y-2.5">
+                <h4 className="text-sm font-bold text-amber-900 flex items-center gap-1.5">
+                  <ShieldAlert className="h-4 w-4 text-amber-600" />
+                  ④ 公式マスターデータに復元（BCP40品目・販売物品14品目）
+                </h4>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  品目登録が誤って消去された場合でも、公式仕様の<strong>BCP備蓄品全40品目</strong>および<strong>利用者販売用全14品目</strong>をワンクリックで新品状態のマスターデータとして即時再登録・復元します。（※利用者名や過去の請求履歴はそのまま維持されます）
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRestoreMasterDefaults}
+                  disabled={backupActionLoading}
+                  className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  公式マスターデータ（40品目＋14品目）を復元
+                </button>
+              </div>
+
+            </div>
+
+            <div className="p-4 bg-slate-100 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBackupModal(false);
+                  setBackupFeedbackMsg(null);
+                }}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg transition"
+              >
+                閉じる
+              </button>
+            </div>
           </div>
         </div>
       )}
