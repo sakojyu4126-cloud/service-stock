@@ -686,6 +686,28 @@ export default function App() {
     setEditStockNotes(stock.notes || "");
   };
 
+  // Helper to persist current DB state to localStorage for offline & Vercel resilience
+  const saveLocalCache = (partial: { products?: Product[]; stockpiles?: Stockpile[]; withdrawals?: Withdrawal[]; users?: string[]; staff?: string[] }) => {
+    try {
+      const currentRaw = localStorage.getItem("momo_offline_cache");
+      const current = currentRaw ? JSON.parse(currentRaw) : {};
+      const updated = {
+        ...current,
+        products: partial.products !== undefined ? partial.products : products,
+        stockpiles: partial.stockpiles !== undefined ? partial.stockpiles : stockpiles,
+        withdrawals: partial.withdrawals !== undefined ? partial.withdrawals : withdrawals,
+        users: partial.users !== undefined ? partial.users : users,
+        staff: partial.staff !== undefined ? partial.staff : staff
+      };
+      localStorage.setItem("momo_offline_cache", JSON.stringify(updated));
+    } catch (e) {
+      console.warn("Local storage write error:", e);
+    }
+  };
+
+  const stockSetTimeoutRef = useRef<Record<string, any>>({});
+  const prodStockSetTimeoutRef = useRef<Record<string, any>>({});
+
   const handleUpdateStockpileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStockpile) return;
@@ -694,27 +716,53 @@ export default function App() {
       return;
     }
 
+    const updatedStock: Stockpile = {
+      ...editingStockpile,
+      name: editStockName.trim(),
+      currentStock: Number(editStockQty) || 0,
+      requiredStock: Number(editStockRequired) || 0,
+      unit: editStockUnit || "個",
+      location: editStockLocation || "5番館倉庫",
+      notes: editStockNotes || "",
+      alertDismissed: Number(editStockQty) > 1 ? false : editingStockpile.alertDismissed
+    };
+
+    // 1. Optimistic Local Update: instantly reflect in state & localStorage
+    const newStockpiles = stockpiles.map(s => s.id === editingStockpile.id ? updatedStock : s);
+    setStockpiles(newStockpiles);
+    saveLocalCache({ stockpiles: newStockpiles });
+    const targetId = editingStockpile.id;
+    setEditingStockpile(null);
+
+    // 2. Background Server Sync
     try {
-      const res = await fetch(`/api/stockpiles/${editingStockpile.id}`, {
+      const res = await fetch(`/api/stockpiles/${targetId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: editStockName,
-          currentStock: Number(editStockQty),
-          requiredStock: Number(editStockRequired),
-          unit: editStockUnit,
-          location: editStockLocation,
-          notes: editStockNotes
+          name: updatedStock.name,
+          currentStock: updatedStock.currentStock,
+          requiredStock: updatedStock.requiredStock,
+          unit: updatedStock.unit,
+          location: updatedStock.location,
+          notes: updatedStock.notes
         })
       });
 
-      if (!res.ok) throw new Error("備蓄品の更新に失敗しました");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "備蓄品の更新に失敗しました");
+      }
+
       const result = await res.json();
-      setStockpiles(result.data.stockpiles);
-      setEditingStockpile(null);
+      if (result?.data?.stockpiles) {
+        setStockpiles(result.data.stockpiles);
+        saveLocalCache({ stockpiles: result.data.stockpiles });
+      }
       alert("備蓄品の登録情報を変更しました！");
     } catch (err: any) {
-      alert(err.message);
+      console.warn("Server sync notice (local change preserved):", err);
+      alert(err.message || "更新に失敗しました");
     }
   };
 
@@ -726,30 +774,76 @@ export default function App() {
       return;
     }
 
+    const priceNum = Number(editProdPriceInclTax) || 0;
+    const priceExclTax = Math.round(priceNum / 1.1);
+    const sellingPrice = Math.round(priceExclTax * 1.2);
+    const stockNum = Number(editProdCurrentStock) || 0;
+
+    const updatedProd: Product = {
+      ...editingProduct,
+      maker: editProdMaker.trim(),
+      category: editProdCategory.trim(),
+      name: editProdName.trim(),
+      capacity: editProdCapacity.trim() || "-",
+      size: editProdSize.trim() || "-",
+      priceInclTax: priceNum,
+      priceExclTax,
+      sellingPrice,
+      currentStock: stockNum
+    };
+
+    // Optimistic local update
+    const newProducts = products.map(p => p.id === editingProduct.id ? updatedProd : p);
+    setProducts(newProducts);
+    
+    // Also sync matching BCP stockpile if syncWithBcp is checked
+    let newStockpiles = stockpiles;
+    if (syncWithBcp) {
+      const sNameTarget = updatedProd.name.toLowerCase();
+      newStockpiles = stockpiles.map(s => {
+        if (s.name.toLowerCase().includes(sNameTarget) || sNameTarget.includes(s.name.toLowerCase())) {
+          return { ...s, currentStock: stockNum, alertDismissed: false };
+        }
+        return s;
+      });
+      setStockpiles(newStockpiles);
+    }
+    saveLocalCache({ products: newProducts, stockpiles: newStockpiles });
+    const targetId = editingProduct.id;
+    setEditingProduct(null);
+
     try {
-      const res = await fetch(`/api/products/${editingProduct.id}`, {
+      const res = await fetch(`/api/products/${targetId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          maker: editProdMaker,
-          category: editProdCategory,
-          name: editProdName,
-          capacity: editProdCapacity,
-          size: editProdSize,
-          priceInclTax: Number(editProdPriceInclTax),
-          currentStock: Number(editProdCurrentStock),
+          maker: updatedProd.maker,
+          category: updatedProd.category,
+          name: updatedProd.name,
+          capacity: updatedProd.capacity,
+          size: updatedProd.size,
+          priceInclTax: updatedProd.priceInclTax,
+          currentStock: updatedProd.currentStock,
           syncWithBcp: syncWithBcp
         })
       });
 
-      if (!res.ok) throw new Error("商品の更新に失敗しました");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "商品の更新に失敗しました");
+      }
+
       const result = await res.json();
-      setProducts(result.data.products);
-      setStockpiles(result.data.stockpiles);
-      setEditingProduct(null);
+      if (result?.data?.products) {
+        setProducts(result.data.products);
+      }
+      if (result?.data?.stockpiles) {
+        setStockpiles(result.data.stockpiles);
+      }
       alert("商品の登録情報を変更し、在庫数も上書き更新しました！");
     } catch (err: any) {
-      alert(err.message);
+      console.warn("Server sync notice (local change preserved):", err);
+      alert(err.message || "更新に失敗しました");
     }
   };
 
@@ -800,7 +894,10 @@ export default function App() {
         })
       });
 
-      if (!res.ok) throw new Error("登録に失敗しました");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "登録に失敗しました");
+      }
       const data = await res.json();
       
       // Save last staff name for next default load
@@ -811,6 +908,12 @@ export default function App() {
       setStockpiles(data.data.stockpiles);
       setUsers(data.data.users);
       setStaff(data.data.staff);
+      saveLocalCache({
+        withdrawals: data.data.withdrawals,
+        stockpiles: data.data.stockpiles,
+        users: data.data.users,
+        staff: data.data.staff
+      });
 
       // Trigger success alert
       const matchedProd = products.find(p => p.id === selectedProductId);
@@ -864,7 +967,10 @@ export default function App() {
         })
       });
 
-      if (!res.ok) throw new Error("登録に失敗しました");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "登録に失敗しました");
+      }
       const result = await res.json();
 
       // Save last staff name
@@ -875,6 +981,10 @@ export default function App() {
       setStockpiles(result.data.stockpiles);
       setStaff(result.data.staff);
       setStaffWithdrawals(result.data.staffWithdrawals || []);
+      saveLocalCache({
+        stockpiles: result.data.stockpiles,
+        staff: result.data.staff
+      });
 
       setHelper2WithdrawalSuccess(`「${helper2ItemName}」を ${helper2Quantity} ${getHelper2ItemUnit(helper2ItemName)}、${helper2Office}宛てに登録しました。在庫数も自動的にマイナスされました。`);
       setHelper2Quantity(1);
@@ -980,85 +1090,141 @@ export default function App() {
   // Quick In-place Stockpile Edit (+/-)
   const handleStockAdjust = async (id: string, currentVal: number, change: number) => {
     const newVal = Math.max(0, currentVal + change);
+    // Optimistic local update
+    const updated = stockpiles.map(s => s.id === id ? { ...s, currentStock: newVal, alertDismissed: newVal > 1 ? false : s.alertDismissed } : s);
+    setStockpiles(updated);
+    saveLocalCache({ stockpiles: updated });
+
     try {
       const res = await fetch(`/api/stockpiles/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentStock: newVal })
       });
-      if (!res.ok) throw new Error("在庫数の更新に失敗しました");
-      const result = await res.json();
-      setStockpiles(result.data.stockpiles);
+      if (res.ok) {
+        const result = await res.json();
+        if (result?.data?.stockpiles) {
+          setStockpiles(result.data.stockpiles);
+          saveLocalCache({ stockpiles: result.data.stockpiles });
+        }
+      }
     } catch (err: any) {
-      alert(err.message);
+      console.warn("Stockpile adjust error (local change retained):", err);
     }
   };
 
-  // Direct In-place Stockpile Edit (Direct Input Overwrite)
-  const handleStockSet = async (id: string, newVal: number) => {
+  // Direct In-place Stockpile Edit (Direct Input Overwrite with debounce)
+  const handleStockSet = (id: string, newVal: number) => {
     const val = Math.max(0, newVal);
-    try {
-      const res = await fetch(`/api/stockpiles/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentStock: val })
-      });
-      if (!res.ok) throw new Error("在庫数の更新に失敗しました");
-      const result = await res.json();
-      setStockpiles(result.data.stockpiles);
-    } catch (err: any) {
-      alert(err.message);
+    // 1. Instant local update
+    const updated = stockpiles.map(s => s.id === id ? { ...s, currentStock: val, alertDismissed: val > 1 ? false : s.alertDismissed } : s);
+    setStockpiles(updated);
+    saveLocalCache({ stockpiles: updated });
+
+    // 2. Debounced background sync
+    if (stockSetTimeoutRef.current[id]) {
+      clearTimeout(stockSetTimeoutRef.current[id]);
     }
+    stockSetTimeoutRef.current[id] = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/stockpiles/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currentStock: val })
+        });
+        if (res.ok) {
+          const result = await res.json();
+          if (result?.data?.stockpiles) {
+            setStockpiles(result.data.stockpiles);
+            saveLocalCache({ stockpiles: result.data.stockpiles });
+          }
+        }
+      } catch (err) {
+        console.warn("Server stock update debounced notice:", err);
+      }
+    }, 400);
   };
 
   // Dismiss/Mute Stockpile alert
   const handleDismissAlert = async (id: string, currentMuted: boolean) => {
+    const updated = stockpiles.map(s => s.id === id ? { ...s, alertDismissed: !currentMuted } : s);
+    setStockpiles(updated);
+    saveLocalCache({ stockpiles: updated });
+
     try {
       const res = await fetch(`/api/stockpiles/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ alertDismissed: !currentMuted })
       });
-      if (!res.ok) throw new Error("アラート状態の更新に失敗しました");
-      const result = await res.json();
-      setStockpiles(result.data.stockpiles);
+      if (res.ok) {
+        const result = await res.json();
+        if (result?.data?.stockpiles) {
+          setStockpiles(result.data.stockpiles);
+          saveLocalCache({ stockpiles: result.data.stockpiles });
+        }
+      }
     } catch (err: any) {
-      alert(err.message);
+      console.warn("Dismiss alert notice:", err);
     }
   };
 
   // Adjust product catalog stock count (diaper hygiene product stock)
   const handleProductStockAdjust = async (id: string, currentStock: number, diff: number) => {
     const nextStock = Math.max(0, currentStock + diff);
+    // Optimistic local update
+    const updated = products.map(p => p.id === id ? { ...p, currentStock: nextStock } : p);
+    setProducts(updated);
+    saveLocalCache({ products: updated });
+
     try {
       const res = await fetch(`/api/products/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentStock: nextStock })
       });
-      if (!res.ok) throw new Error("在庫数の更新に失敗しました");
-      const result = await res.json();
-      setProducts(result.data.products);
+      if (res.ok) {
+        const result = await res.json();
+        if (result?.data?.products) {
+          setProducts(result.data.products);
+          saveLocalCache({ products: result.data.products });
+        }
+      }
     } catch (err: any) {
-      alert(err.message);
+      console.warn("Product adjust error (local change retained):", err);
     }
   };
 
-  // Direct In-place Product Stock Edit (Direct Input Overwrite)
-  const handleProductStockSet = async (id: string, val: number) => {
+  // Direct In-place Product Stock Edit (Direct Input Overwrite with debounce)
+  const handleProductStockSet = (id: string, val: number) => {
     const nextStock = Math.max(0, val);
-    try {
-      const res = await fetch(`/api/products/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentStock: nextStock })
-      });
-      if (!res.ok) throw new Error("在庫数の更新に失敗しました");
-      const result = await res.json();
-      setProducts(result.data.products);
-    } catch (err: any) {
-      alert(err.message);
+    // 1. Instant local update
+    const updated = products.map(p => p.id === id ? { ...p, currentStock: nextStock } : p);
+    setProducts(updated);
+    saveLocalCache({ products: updated });
+
+    // 2. Debounced background sync
+    if (prodStockSetTimeoutRef.current[id]) {
+      clearTimeout(prodStockSetTimeoutRef.current[id]);
     }
+    prodStockSetTimeoutRef.current[id] = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/products/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currentStock: nextStock })
+        });
+        if (res.ok) {
+          const result = await res.json();
+          if (result?.data?.products) {
+            setProducts(result.data.products);
+            saveLocalCache({ products: result.data.products });
+          }
+        }
+      } catch (err) {
+        console.warn("Server prod stock update debounced notice:", err);
+      }
+    }, 400);
   };
 
   // Submit new product catalog entry
@@ -1069,22 +1235,53 @@ export default function App() {
       return;
     }
     try {
+      const priceNum = Number(newProdPriceInclTax) || 0;
+      const priceExclTax = Math.round(priceNum / 1.1);
+      const sellingPrice = Math.round(priceExclTax * 1.2);
+      const stockNum = Number(newProdCurrentStock) || 0;
+
+      // Optimistic local add
+      const tempId = "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).substring(2, 6);
+      const optimisticProd: Product = {
+        id: tempId,
+        maker: newProdMaker.trim(),
+        category: newProdCategory.trim(),
+        name: newProdName.trim(),
+        capacity: newProdCapacity.trim() || "-",
+        size: newProdSize.trim() || "-",
+        priceInclTax: priceNum,
+        priceExclTax,
+        sellingPrice,
+        currentStock: stockNum
+      };
+
+      const nextProducts = [...products, optimisticProd];
+      setProducts(nextProducts);
+      saveLocalCache({ products: nextProducts });
+
       const res = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          maker: newProdMaker,
-          category: newProdCategory,
-          name: newProdName,
-          capacity: newProdCapacity,
-          size: newProdSize,
-          priceInclTax: Number(newProdPriceInclTax),
-          currentStock: Number(newProdCurrentStock) || 0
+          maker: optimisticProd.maker,
+          category: optimisticProd.category,
+          name: optimisticProd.name,
+          capacity: optimisticProd.capacity,
+          size: optimisticProd.size,
+          priceInclTax: priceNum,
+          currentStock: stockNum
         })
       });
-      if (!res.ok) throw new Error("商品の追加に失敗しました");
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "商品の登録に失敗しました");
+      }
       const result = await res.json();
-      setProducts(result.data.products);
+      if (result?.data?.products) {
+        setProducts(result.data.products);
+        saveLocalCache({ products: result.data.products });
+      }
       
       // Reset form
       setNewProdMaker("");
@@ -1093,9 +1290,9 @@ export default function App() {
       setNewProdSize("");
       setNewProdPriceInclTax("");
       setNewProdCurrentStock(10);
-      alert("商品マスターに新しい商品を追加しました！");
+      alert("商品マスターに新しい商品を追加登録しました！");
     } catch (err: any) {
-      alert(err.message);
+      alert(err.message || "商品の登録に失敗しました");
     }
   };
 
@@ -1110,6 +1307,7 @@ export default function App() {
           if (!res.ok) throw new Error("削除に失敗しました");
           const result = await res.json();
           setProducts(result.data.products);
+          saveLocalCache({ products: result.data.products });
         } catch (err: any) {
           alert(err.message);
         }
@@ -1126,22 +1324,50 @@ export default function App() {
       return;
     }
     try {
+      const stockQty = Number(newStockQty) || 0;
+      const stockReq = Number(newStockRequired) || 0;
+
+      // Optimistic local add
+      const tempId = "s_" + Date.now().toString(36) + "_" + Math.random().toString(36).substring(2, 6);
+      const optimisticStock: Stockpile = {
+        id: tempId,
+        name: newStockName.trim(),
+        currentStock: stockQty,
+        requiredStock: stockReq,
+        unit: (newStockUnit || "個").trim(),
+        location: (newStockLocation || "5番館倉庫").trim(),
+        manager: (newStockManager || "").trim(),
+        notes: (newStockNotes || "").trim(),
+        alertDismissed: false
+      };
+
+      const nextStockpiles = [...stockpiles, optimisticStock];
+      setStockpiles(nextStockpiles);
+      saveLocalCache({ stockpiles: nextStockpiles });
+
       const res = await fetch("/api/stockpiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: newStockName,
-          currentStock: Number(newStockQty),
-          requiredStock: Number(newStockRequired),
-          unit: newStockUnit,
-          location: newStockLocation,
-          manager: newStockManager,
-          notes: newStockNotes
+          name: optimisticStock.name,
+          currentStock: stockQty,
+          requiredStock: stockReq,
+          unit: optimisticStock.unit,
+          location: optimisticStock.location,
+          manager: optimisticStock.manager,
+          notes: optimisticStock.notes
         })
       });
-      if (!res.ok) throw new Error("備蓄品の追加に失敗しました");
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "備蓄品の登録に失敗しました");
+      }
       const result = await res.json();
-      setStockpiles(result.data.stockpiles);
+      if (result?.data?.stockpiles) {
+        setStockpiles(result.data.stockpiles);
+        saveLocalCache({ stockpiles: result.data.stockpiles });
+      }
 
       // Reset form
       setNewStockName("");
@@ -1149,9 +1375,9 @@ export default function App() {
       setNewStockRequired("");
       setNewStockManager("");
       setNewStockNotes("");
-      alert("備蓄品（BCP）リストに新しいアイテムを追加しました！");
+      alert("備蓄品（BCP）リストに新しいアイテムを追加登録しました！");
     } catch (err: any) {
-      alert(err.message);
+      alert(err.message || "備蓄品の登録に失敗しました");
     }
   };
 
@@ -1166,6 +1392,7 @@ export default function App() {
           if (!res.ok) throw new Error("削除に失敗しました");
           const result = await res.json();
           setStockpiles(result.data.stockpiles);
+          saveLocalCache({ stockpiles: result.data.stockpiles });
         } catch (err: any) {
           alert(err.message);
         }

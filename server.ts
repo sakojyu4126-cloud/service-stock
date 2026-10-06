@@ -39,9 +39,9 @@ app.use((req, res, next) => {
     }
     requestTracker.set(clientKey, entry);
 
-    // Safeguard: throttle if a client sends > 40 API requests within 10 seconds
-    if (entry.count > 40) {
-      console.warn(`[API Rate Limit] Excess calls blocked from ${clientKey} (${entry.count} in 10s)`);
+    // Safeguard: throttle only if a client sends > 200 API requests within 10 seconds (runaway loops)
+    if (entry.count > 200) {
+      console.warn(`[API Rate Limit] Runaway loop blocked from ${clientKey} (${entry.count} in 10s)`);
       res.setHeader("Retry-After", "5");
       return res.status(429).json({ error: "アクセスが集中しています。5秒後に再試行してください。（ループ防止保護）" });
     }
@@ -161,9 +161,24 @@ function normalizeName(name: string): string {
     .replace(/[a-zA-Z]/g, (l) => l.toLowerCase());
 }
 
+let memoryDb: any = null;
+
 async function readDatabase() {
+  if (memoryDb) {
+    return memoryDb;
+  }
   try {
-    const raw = await fs.readFile(DATA_FILE, "utf-8");
+    let raw = "";
+    try {
+      raw = await fs.readFile(DATA_FILE, "utf-8");
+    } catch {
+      try {
+        const tmpFile = path.join("/tmp", "data-store.json");
+        raw = await fs.readFile(tmpFile, "utf-8");
+      } catch {
+        raw = await fs.readFile(MASTER_TEMPLATE_FILE, "utf-8");
+      }
+    }
     const parsed = JSON.parse(raw);
     let modified = false;
 
@@ -286,12 +301,11 @@ async function readDatabase() {
       }
     }
 
-    // Ensure all stockpile items have a unique, clean sequential ID (e.g., s1, s2, s3, ...)
+    // Ensure all stockpile items have a unique ID, preserving existing stable IDs
     if (parsed.stockpiles) {
       parsed.stockpiles.forEach((s: any, i: number) => {
-        const expectedId = `s${i + 1}`;
-        if (s.id !== expectedId) {
-          s.id = expectedId;
+        if (!s.id) {
+          s.id = `s${i + 1}`;
           modified = true;
         }
         if (typeof s.currentStock !== "number" || isNaN(s.currentStock) || s.currentStock < 0) {
@@ -321,7 +335,19 @@ async function readDatabase() {
 }
 
 async function writeDatabase(data: any) {
-  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
+  memoryDb = data;
+  try {
+    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err: any) {
+    // If process.cwd() is read-only (e.g. Vercel Serverless), fallback to /tmp
+    console.warn(`[Storage Info] Direct file write to ${DATA_FILE} skipped: ${err?.message}`);
+    try {
+      const tmpFile = path.join("/tmp", "data-store.json");
+      await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), "utf-8");
+    } catch {
+      // Memory persistence already active
+    }
+  }
 }
 
 // REST APIs
@@ -621,15 +647,17 @@ app.post("/api/withdrawals/clear", async (req, res) => {
 app.post("/api/products", async (req, res) => {
   try {
     const { maker, category, name, capacity, size, priceInclTax, currentStock } = req.body;
-    const db = await readDatabase();
-    const stockVal = currentStock !== undefined ? (Number(currentStock) || 0) : 10; // Default to 10 if not specified (e.g. from template/imports)
+    const cleanName = (name || "").trim();
+    if (!cleanName) {
+      return res.status(400).json({ error: "商品名（パッケージ記載名）を入力してください。" });
+    }
 
+    const db = await readDatabase();
+    const stockVal = currentStock !== undefined && currentStock !== "" ? Math.max(0, Number(currentStock) || 0) : 10;
     const prices = calculatePrices(Number(priceInclTax) || 0);
 
-    // Normalize and check for duplicate
-    const cleanMaker = (maker || "").trim();
-    const cleanCategory = (category || "").trim();
-    const cleanName = (name || "").trim();
+    const cleanMaker = (maker || "一般").trim();
+    const cleanCategory = (category || "尿取りパット類").trim();
     const cleanCapacity = (capacity || "-").trim();
     const cleanSize = (size || "-").trim();
 
@@ -642,17 +670,17 @@ app.post("/api/products", async (req, res) => {
     );
 
     if (existingIndex !== -1) {
-      // Exist! Update its price and add to its stock
+      // Exists! Update its price and add to its stock
       db.products[existingIndex].priceInclTax = Number(priceInclTax) || 0;
       db.products[existingIndex].priceExclTax = prices.priceExclTax;
       db.products[existingIndex].sellingPrice = prices.sellingPrice;
       db.products[existingIndex].currentStock = (db.products[existingIndex].currentStock || 0) + stockVal;
       await writeDatabase(db);
-      return res.json({ message: "Product updated", product: db.products[existingIndex], data: db });
+      return res.json({ message: "商品情報を更新しました", product: db.products[existingIndex], data: db });
     }
 
     const newProduct = {
-      id: "p_" + Math.random().toString(36).substring(2, 11),
+      id: "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).substring(2, 7),
       maker: cleanMaker,
       category: cleanCategory,
       name: cleanName,
@@ -666,7 +694,7 @@ app.post("/api/products", async (req, res) => {
 
     db.products.push(newProduct);
     await writeDatabase(db);
-    res.json({ message: "Product added", product: newProduct, data: db });
+    res.json({ message: "新しい商品を追加しました", product: newProduct, data: db });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -677,17 +705,23 @@ app.put("/api/products/:id", async (req, res) => {
     const { id } = req.params;
     const { maker, category, name, capacity, size, priceInclTax, currentStock, syncWithBcp } = req.body;
     const db = await readDatabase();
-    const idx = db.products.findIndex((p: any) => p.id === id);
+    let idx = db.products.findIndex((p: any) => p.id === id);
+
+    // Fallback: search by name match if ID wasn't found directly
+    if (idx === -1 && name) {
+      idx = db.products.findIndex((p: any) => normalizeName(p.name) === normalizeName(name));
+    }
+
     if (idx !== -1) {
       const oldName = db.products[idx].name;
       const oldCategory = db.products[idx].category;
 
-      if (maker !== undefined) db.products[idx].maker = maker;
-      if (category !== undefined) db.products[idx].category = category;
-      if (name !== undefined) db.products[idx].name = name;
-      if (capacity !== undefined) db.products[idx].capacity = capacity;
-      if (size !== undefined) db.products[idx].size = size;
-      if (currentStock !== undefined) db.products[idx].currentStock = Number(currentStock);
+      if (maker !== undefined) db.products[idx].maker = String(maker).trim();
+      if (category !== undefined) db.products[idx].category = String(category).trim();
+      if (name !== undefined) db.products[idx].name = String(name).trim();
+      if (capacity !== undefined) db.products[idx].capacity = String(capacity).trim();
+      if (size !== undefined) db.products[idx].size = String(size).trim();
+      if (currentStock !== undefined) db.products[idx].currentStock = Math.max(0, Number(currentStock) || 0);
       if (priceInclTax !== undefined) {
         db.products[idx].priceInclTax = Number(priceInclTax) || 0;
         const prices = calculatePrices(Number(priceInclTax) || 0);
@@ -702,23 +736,39 @@ app.put("/api/products/:id", async (req, res) => {
           (oldName || "").toLowerCase(),
           (category || "").toLowerCase(),
           (oldCategory || "").toLowerCase()
-        ];
+        ].filter(Boolean);
         
         db.stockpiles.forEach((s: any) => {
           const sName = (s.name || "").toLowerCase();
-          // Check if there's any partial overlap to find the matching BCP item
-          const isMatch = searchNames.some(n => n && (sName.includes(n) || n.includes(sName)));
+          const isMatch = searchNames.some(n => n.length >= 2 && (sName.includes(n) || n.includes(sName)));
           if (isMatch) {
-            s.currentStock = Number(currentStock);
-            s.alertDismissed = false; // Reset alert dismiss state
+            s.currentStock = Math.max(0, Number(currentStock) || 0);
+            s.alertDismissed = false;
           }
         });
       }
 
       await writeDatabase(db);
-      return res.json({ message: "Product updated", data: db });
+      return res.json({ message: "Product updated", product: db.products[idx], data: db });
     }
-    res.status(404).json({ error: "Product not found" });
+
+    // Auto-upsert product if not found
+    const prices = calculatePrices(Number(priceInclTax) || 0);
+    const newProduct = {
+      id: id || ("p_" + Date.now().toString(36)),
+      maker: (maker || "一般").trim(),
+      category: (category || "尿取りパット類").trim(),
+      name: (name || "商品").trim(),
+      capacity: (capacity || "-").trim(),
+      size: (size || "-").trim(),
+      priceInclTax: Number(priceInclTax) || 0,
+      priceExclTax: prices.priceExclTax,
+      sellingPrice: prices.sellingPrice,
+      currentStock: Math.max(0, Number(currentStock) || 0)
+    };
+    db.products.push(newProduct);
+    await writeDatabase(db);
+    return res.json({ message: "Product upserted", product: newProduct, data: db });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -740,50 +790,55 @@ app.delete("/api/products/:id", async (req, res) => {
 app.post("/api/stockpiles", async (req, res) => {
   try {
     const { name, currentStock, requiredStock, unit, location, manager, notes } = req.body;
-    const db = await readDatabase();
-
     const cleanName = (name || "").trim();
-    const cleanLocation = (location || "倉庫").trim();
+    if (!cleanName) {
+      return res.status(400).json({ error: "品目（備蓄品名）を入力してください。" });
+    }
+
+    const db = await readDatabase();
+    const cleanLocation = (location || "5番館倉庫").trim();
+    const stockQty = Math.max(0, Number(currentStock) || 0);
+    const reqQty = Math.max(0, Number(requiredStock) || 0);
 
     // Check if an item with the exact same name and location already exists (case-insensitive)
     const existingIndex = db.stockpiles.findIndex((s: any) => 
       (s.name || "").trim().toLowerCase() === cleanName.toLowerCase() &&
-      (s.location || "倉庫").trim().toLowerCase() === cleanLocation.toLowerCase()
+      (s.location || "5番館倉庫").trim().toLowerCase() === cleanLocation.toLowerCase()
     );
 
     if (existingIndex !== -1) {
-      // Exist! Merge currentStock
-      db.stockpiles[existingIndex].currentStock += (Number(currentStock) || 0);
-      if (Number(requiredStock) > 0) {
-        db.stockpiles[existingIndex].requiredStock = Number(requiredStock);
+      // Exists! Merge currentStock
+      db.stockpiles[existingIndex].currentStock += stockQty;
+      if (reqQty > 0) {
+        db.stockpiles[existingIndex].requiredStock = reqQty;
       }
-      if (manager) db.stockpiles[existingIndex].manager = manager;
-      if (notes) db.stockpiles[existingIndex].notes = notes;
+      if (manager) db.stockpiles[existingIndex].manager = String(manager).trim();
+      if (notes) db.stockpiles[existingIndex].notes = String(notes).trim();
+      if (unit) db.stockpiles[existingIndex].unit = String(unit).trim();
       
-      // Reset alert dismissed flag if stock is updated
       if (db.stockpiles[existingIndex].currentStock > 1) {
         db.stockpiles[existingIndex].alertDismissed = false;
       }
 
       await writeDatabase(db);
-      return res.json({ message: "Stockpile item merged", stockpile: db.stockpiles[existingIndex], data: db });
+      return res.json({ message: "備蓄品情報を統合・更新しました", stockpile: db.stockpiles[existingIndex], data: db });
     }
 
     const newStock = {
-      id: "s_" + Math.random().toString(36).substring(2, 11),
+      id: "s_" + Date.now().toString(36) + "_" + Math.random().toString(36).substring(2, 7),
       name: cleanName,
-      currentStock: Number(currentStock) || 0,
-      requiredStock: Number(requiredStock) || 0,
-      unit: unit || "個",
+      currentStock: stockQty,
+      requiredStock: reqQty,
+      unit: (unit || "個").trim(),
       location: cleanLocation,
-      manager: manager || "",
-      notes: notes || "",
+      manager: (manager || "").trim(),
+      notes: (notes || "").trim(),
       alertDismissed: false
     };
 
     db.stockpiles.push(newStock);
     await writeDatabase(db);
-    res.json({ message: "Stockpile item added", stockpile: newStock, data: db });
+    res.json({ message: "新しい備蓄品を追加しました", stockpile: newStock, data: db });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -794,27 +849,47 @@ app.put("/api/stockpiles/:id", async (req, res) => {
     const { id } = req.params;
     const { currentStock, requiredStock, alertDismissed, name, unit, location, manager, notes } = req.body;
     const db = await readDatabase();
-    const idx = db.stockpiles.findIndex((s: any) => s.id === id);
+    let idx = db.stockpiles.findIndex((s: any) => s.id === id);
+
+    // Fallback: search by name match if ID wasn't found directly
+    if (idx === -1 && name) {
+      idx = db.stockpiles.findIndex((s: any) => normalizeName(s.name) === normalizeName(name));
+    }
+
     if (idx !== -1) {
       if (currentStock !== undefined) {
-        db.stockpiles[idx].currentStock = Number(currentStock);
-        // auto reset alertDismissed if we restock above 1
-        if (Number(currentStock) > 1) {
+        db.stockpiles[idx].currentStock = Math.max(0, Number(currentStock) || 0);
+        if (db.stockpiles[idx].currentStock > 1) {
           db.stockpiles[idx].alertDismissed = false;
         }
       }
-      if (requiredStock !== undefined) db.stockpiles[idx].requiredStock = Number(requiredStock);
+      if (requiredStock !== undefined) db.stockpiles[idx].requiredStock = Math.max(0, Number(requiredStock) || 0);
       if (alertDismissed !== undefined) db.stockpiles[idx].alertDismissed = Boolean(alertDismissed);
-      if (name !== undefined) db.stockpiles[idx].name = name;
-      if (unit !== undefined) db.stockpiles[idx].unit = unit;
-      if (location !== undefined) db.stockpiles[idx].location = location;
-      if (manager !== undefined) db.stockpiles[idx].manager = manager;
-      if (notes !== undefined) db.stockpiles[idx].notes = notes;
+      if (name !== undefined) db.stockpiles[idx].name = String(name).trim();
+      if (unit !== undefined) db.stockpiles[idx].unit = String(unit).trim();
+      if (location !== undefined) db.stockpiles[idx].location = String(location).trim();
+      if (manager !== undefined) db.stockpiles[idx].manager = String(manager).trim();
+      if (notes !== undefined) db.stockpiles[idx].notes = String(notes).trim();
 
       await writeDatabase(db);
-      return res.json({ message: "Stockpile item updated", data: db });
+      return res.json({ message: "Stockpile item updated", stockpile: db.stockpiles[idx], data: db });
     }
-    res.status(404).json({ error: "Stockpile item not found" });
+
+    // Auto-upsert stockpile if not found
+    const newStock = {
+      id: id || ("s_" + Date.now().toString(36)),
+      name: (name || "備蓄品").trim(),
+      currentStock: Math.max(0, Number(currentStock) || 0),
+      requiredStock: Math.max(0, Number(requiredStock) || 0),
+      unit: (unit || "個").trim(),
+      location: (location || "5番館倉庫").trim(),
+      manager: (manager || "").trim(),
+      notes: (notes || "").trim(),
+      alertDismissed: false
+    };
+    db.stockpiles.push(newStock);
+    await writeDatabase(db);
+    return res.json({ message: "Stockpile item upserted", stockpile: newStock, data: db });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1269,3 +1344,5 @@ async function startServer() {
 }
 
 startServer();
+
+export default app;

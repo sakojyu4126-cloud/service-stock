@@ -174,7 +174,7 @@
       "id": "s1",
       "name": "PVC使い捨て手袋S",
       "currentStock": 10,
-      "requiredStock": 10,
+      "requiredStock": 15,
       "unit": "箱",
       "location": "5番館倉庫",
       "manager": "衛生担当",
@@ -591,7 +591,7 @@
     {
       "id": "s39",
       "name": "ハンドペーパー",
-      "currentStock": 250,
+      "currentStock": 270,
       "requiredStock": 250,
       "unit": "袋",
       "location": "5番館倉庫",
