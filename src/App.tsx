@@ -32,9 +32,23 @@ import {
   ShieldAlert,
   ArrowUpDown,
   Printer,
-  FileText
+  FileText,
+  Calendar
 } from "lucide-react";
-import { Product, Withdrawal, Stockpile, ActiveTab } from "./types";
+import { Product, Withdrawal, Stockpile, StaffWithdrawal, ActiveTab } from "./types";
+
+// Helper to determine billing month based on 15th cutoff
+function getBillingMonth(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  let month = d.getMonth() + 1;
+  const day = d.getDate();
+  if (day >= 16) {
+    month += 1;
+    if (month > 12) month = 1;
+  }
+  return `${month}月`;
+}
 
 // Standard master items guaranteed to exist and display
 const DEFAULT_PRODUCTS: Product[] = [
@@ -136,7 +150,16 @@ export default function App() {
     return DEFAULT_STOCKPILES;
   });
 
-  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>(() => {
+    try {
+      const cached = localStorage.getItem("momo_offline_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.withdrawals)) return parsed.withdrawals;
+      }
+    } catch {}
+    return [];
+  });
   const [users, setUsers] = useState<string[]>([]);
   const [staff, setStaff] = useState<string[]>([]);
   
@@ -151,11 +174,46 @@ export default function App() {
   const [helper2Category, setHelper2Category] = useState<string>("①衛生用品-1（日常業務用）");
   const [helper2ItemName, setHelper2ItemName] = useState<string>("");
   const [helper2Quantity, setHelper2Quantity] = useState<number>(1);
-  const [helper2StaffInput, setHelper2StaffInput] = useState<string>(() => localStorage.getItem("momo_last_staff") || "");
+  const [helper2StaffInput, setHelper2StaffInput] = useState<string>(() => {
+    try {
+      return localStorage.getItem("momo_last_staff") || "";
+    } catch {
+      return "";
+    }
+  });
   const [showHelper2StaffSuggestions, setShowHelper2StaffSuggestions] = useState(false);
   const [helper2WithdrawalSuccess, setHelper2WithdrawalSuccess] = useState<string | null>(null);
   const [helper2WithdrawDate, setHelper2WithdrawDate] = useState("");
-  const [staffWithdrawals, setStaffWithdrawals] = useState<any[]>([]);
+  const [staffWithdrawals, setStaffWithdrawals] = useState<StaffWithdrawal[]>(() => {
+    try {
+      const cached = localStorage.getItem("momo_offline_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.staffWithdrawals)) return parsed.staffWithdrawals;
+      }
+    } catch {}
+    return [];
+  });
+
+  // Filter States for 出庫履歴 (スマホ出庫①)
+  const [helper1HistoryMonth, setHelper1HistoryMonth] = useState<string>("全て");
+  const [helper1HistorySearch, setHelper1HistorySearch] = useState<string>("");
+
+  // Filter States for 職員出庫履歴 (スマホ出庫②)
+  const [helper2HistoryMonth, setHelper2HistoryMonth] = useState<string>("全て");
+  const [helper2HistoryOffice, setHelper2HistoryOffice] = useState<string>("全て");
+  const [helper2HistorySearch, setHelper2HistorySearch] = useState<string>("");
+
+  // Filter States for 出庫記録タブ（出庫記録・統合履歴一覧表）
+  const [historyViewMode, setHistoryViewMode] = useState<"grouped" | "table">("grouped");
+  const [historyTypeFilter, setHistoryTypeFilter] = useState<"all" | "user" | "staff">("all");
+  const [historyMonthFilter, setHistoryMonthFilter] = useState<string>("全て");
+  const [historySearchQuery, setHistorySearchQuery] = useState<string>("");
+
+  // Legacy compatibility for stockpile subtab
+  const [stockHistoryType, setStockHistoryType] = useState<"all" | "staff" | "user">("all");
+  const [stockHistoryMonth, setStockHistoryMonth] = useState<string>("全て");
+  const [stockHistorySearch, setStockHistorySearch] = useState<string>("");
 
   // Filter States (Billing Screen)
   const [billingMonthFilter, setBillingMonthFilter] = useState<string>("全て");
@@ -174,9 +232,9 @@ export default function App() {
   const [productSearchQuery, setProductSearchQuery] = useState("");
   const [productSortBy, setProductSortBy] = useState<string>("category");
 
-  // Print & PDF Export States (在庫管理 印刷・PDF保存)
+  // Print & PDF Export States (在庫管理・出庫記録 印刷・PDF保存)
   const [showPrintModal, setShowPrintModal] = useState(false);
-  const [printTarget, setPrintTarget] = useState<"bcp" | "diaper" | "all">("bcp");
+  const [printTarget, setPrintTarget] = useState<"bcp" | "diaper" | "history" | "all">("bcp");
   const [printFilter, setPrintFilter] = useState<"all" | "alert" | "filtered">("all");
   const [printIncludeStamp, setPrintIncludeStamp] = useState(true);
 
@@ -225,7 +283,7 @@ export default function App() {
   const [newProdSize, setNewProdSize] = useState("");
   const [newProdPriceInclTax, setNewProdPriceInclTax] = useState<number | "">("");
   const [newProdCurrentStock, setNewProdCurrentStock] = useState<number | "">(10);
-  const [stockSubTab, setStockSubTab] = useState<"bcp" | "diaper">("bcp");
+  const [stockSubTab, setStockSubTab] = useState<"bcp" | "diaper" | "history">("bcp");
 
   // Form States - Admin New Stockpile
   const [newStockName, setNewStockName] = useState("");
@@ -951,7 +1009,7 @@ export default function App() {
   };
 
   // Helper to persist current DB state to localStorage for offline & Vercel resilience
-  const saveLocalCache = (partial: { products?: Product[]; stockpiles?: Stockpile[]; withdrawals?: Withdrawal[]; users?: string[]; staff?: string[] }) => {
+  const saveLocalCache = (partial: { products?: Product[]; stockpiles?: Stockpile[]; withdrawals?: Withdrawal[]; users?: string[]; staff?: string[]; staffWithdrawals?: StaffWithdrawal[] }) => {
     try {
       const currentRaw = localStorage.getItem("momo_offline_cache");
       const current = currentRaw ? JSON.parse(currentRaw) : {};
@@ -961,7 +1019,8 @@ export default function App() {
         stockpiles: partial.stockpiles !== undefined ? partial.stockpiles : stockpiles,
         withdrawals: partial.withdrawals !== undefined ? partial.withdrawals : withdrawals,
         users: partial.users !== undefined ? partial.users : users,
-        staff: partial.staff !== undefined ? partial.staff : staff
+        staff: partial.staff !== undefined ? partial.staff : staff,
+        staffWithdrawals: partial.staffWithdrawals !== undefined ? partial.staffWithdrawals : staffWithdrawals
       };
       localStorage.setItem("momo_offline_cache", JSON.stringify(updated));
     } catch (e) {
@@ -1122,7 +1181,7 @@ export default function App() {
     setHelper2WithdrawDate(localISO);
   }, []);
 
-  // Handle Withdrawal Submission
+  // Handle Withdrawal Submission (スマホ出庫①)
   const handleWithdrawalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -1137,8 +1196,20 @@ export default function App() {
       alert("担当ヘルパー名を入力してください。");
       return;
     }
-    if (!selectedProductId) {
-      alert("物品を選択してください。");
+
+    // Auto-select if selectedProductId is empty but filtered list is available
+    let targetProductId = selectedProductId;
+    if (!targetProductId && filteredProductsByCategory.length > 0) {
+      targetProductId = filteredProductsByCategory[0].id;
+      setSelectedProductId(targetProductId);
+    }
+
+    const matchedProd = products.find(p => p.id === targetProductId) || 
+      filteredProductsByCategory[0] || 
+      products[0];
+
+    if (!matchedProd) {
+      alert("出庫する物品を選択してください。");
       return;
     }
 
@@ -1147,6 +1218,63 @@ export default function App() {
       finalUser = `${finalUser} 様`;
     }
 
+    const qty = Math.max(1, withdrawalQty || 1);
+    const nextStock = Math.max(0, (matchedProd.currentStock ?? 10) - qty);
+
+    // 1. Instant optimistic local stock update (利用者販売用商品在庫よりマイナス)
+    const updatedProducts = products.map(p => p.id === matchedProd.id ? { ...p, currentStock: nextStock } : p);
+    setProducts(updatedProducts);
+
+    const withdrawDateStr = (customWithdrawDate || new Date().toISOString().substring(0, 16)).replace("T", " ");
+    const newWithdrawal: Withdrawal = {
+      id: "w_" + Date.now().toString(36) + "_" + Math.random().toString(36).substring(2, 7),
+      date: withdrawDateStr,
+      userName: finalUser,
+      staffName: finalStaff,
+      productId: matchedProd.id,
+      product: { ...matchedProd, currentStock: nextStock },
+      quantity: qty,
+      billingMonth: getBillingMonth(withdrawDateStr),
+      status: "unbilled",
+      billedDate: null
+    };
+
+    const nextWithdrawals = [newWithdrawal, ...withdrawals];
+    setWithdrawals(nextWithdrawals);
+
+    const nextUsers = users.includes(finalUser) ? users : [...users, finalUser];
+    const nextStaff = staff.includes(finalStaff) ? staff : [...staff, finalStaff];
+    setUsers(nextUsers);
+    setStaff(nextStaff);
+
+    saveLocalCache({
+      products: updatedProducts,
+      withdrawals: nextWithdrawals,
+      users: nextUsers,
+      staff: nextStaff
+    });
+
+    try {
+      localStorage.setItem("momo_last_staff", finalStaff);
+    } catch {}
+
+    // Trigger immediate UI success feedback
+    setWithdrawalSuccess(`「${matchedProd.maker} ${matchedProd.name}」を ${qty} 個、${finalUser} 宛てに出庫登録しました（残り倉庫在庫: ${nextStock}個）。`);
+    showToast(`「${matchedProd.name}」を ${qty}個 出庫登録しました（残: ${nextStock}個）`, "success");
+
+    // Reset inputs
+    setWithdrawalQty(1);
+    setUserInput("");
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    const localISO = new Date(now.getTime() - tzOffset).toISOString().substring(0, 16);
+    setCustomWithdrawDate(localISO);
+
+    setTimeout(() => {
+      setWithdrawalSuccess(null);
+    }, 4500);
+
+    // 2. Background sync to server API
     try {
       const res = await fetch("/api/withdrawals", {
         method: "POST",
@@ -1154,64 +1282,40 @@ export default function App() {
         body: JSON.stringify({
           userName: finalUser,
           staffName: finalStaff,
-          productId: selectedProductId,
-          quantity: withdrawalQty,
+          productId: matchedProd.id,
+          productName: matchedProd.name,
+          quantity: qty,
           date: customWithdrawDate || null
         })
       });
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "登録に失敗しました");
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.data?.products) setProducts(data.data.products);
+        if (data?.data?.withdrawals) setWithdrawals(data.data.withdrawals);
+        if (data?.data?.stockpiles) setStockpiles(data.data.stockpiles);
+        if (data?.data?.users) setUsers(data.data.users);
+        if (data?.data?.staff) setStaff(data.data.staff);
+        saveLocalCache({
+          products: data.data.products,
+          withdrawals: data.data.withdrawals,
+          stockpiles: data.data.stockpiles,
+          users: data.data.users,
+          staff: data.data.staff
+        });
       }
-      const data = await res.json();
-      
-      // Save last staff name for next default load
-      localStorage.setItem("momo_last_staff", finalStaff);
-
-      // Update local states
-      setWithdrawals(data.data.withdrawals);
-      setStockpiles(data.data.stockpiles);
-      setUsers(data.data.users);
-      setStaff(data.data.staff);
-      saveLocalCache({
-        withdrawals: data.data.withdrawals,
-        stockpiles: data.data.stockpiles,
-        users: data.data.users,
-        staff: data.data.staff
-      });
-
-      // Trigger success alert
-      const matchedProd = products.find(p => p.id === selectedProductId);
-      setWithdrawalSuccess(`「${matchedProd?.maker} ${matchedProd?.name}」を ${withdrawalQty} 個、${finalUser} 宛てに登録しました。倉庫在庫も自動調整されました。`);
-      
-      // Reset some fields (Keep staffName filled for consecutive inputs, clear userName)
-      setWithdrawalQty(1);
-      setUserInput("");
-      
-      // Refresh current local time
-      const now = new Date();
-      const tzOffset = now.getTimezoneOffset() * 60000;
-      const localISO = new Date(now.getTime() - tzOffset).toISOString().substring(0, 16);
-      setCustomWithdrawDate(localISO);
-      
-      // Clear message after 4 seconds
-      setTimeout(() => {
-        setWithdrawalSuccess(null);
-      }, 4000);
-
     } catch (err: any) {
-      alert(err.message || "エラーが発生しました");
+      console.warn("Withdrawal server sync notice (local change preserved):", err);
     }
   };
 
-  // Handle Helper 2 (Staff/BCP) Withdrawal Submission
+  // Handle Helper 2 (Staff/BCP) Withdrawal Submission (スマホ出庫②)
   const handleHelper2Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalStaff = helper2StaffInput.trim();
 
     if (!helper2ItemName) {
-      alert("品目を選択してください。");
+      alert("出庫する品目を選択してください。");
       return;
     }
     if (!finalStaff) {
@@ -1219,6 +1323,66 @@ export default function App() {
       return;
     }
 
+    const qty = Math.max(1, helper2Quantity || 1);
+    const normInput = normalizeName(helper2ItemName);
+
+    // Find matching stockpile item
+    const targetStockpile = stockpiles.find(s => normalizeName(s.name) === normInput) ||
+      stockpiles.find(s => {
+        const sNorm = normalizeName(s.name);
+        return sNorm.includes(normInput) || normInput.includes(sNorm);
+      });
+
+    let nextStock = 0;
+    let updatedStockpiles = stockpiles;
+    if (targetStockpile) {
+      nextStock = Math.max(0, targetStockpile.currentStock - qty);
+      updatedStockpiles = stockpiles.map(s => s.id === targetStockpile.id ? { ...s, currentStock: nextStock, alertDismissed: nextStock > 1 ? s.alertDismissed : false } : s);
+      setStockpiles(updatedStockpiles);
+    }
+
+    const withdrawDateStr = (helper2WithdrawDate || new Date().toISOString().substring(0, 16)).replace("T", " ");
+    const newStaffWithdrawal: StaffWithdrawal = {
+      id: "sw_" + Date.now().toString(36) + "_" + Math.random().toString(36).substring(2, 7),
+      date: withdrawDateStr,
+      office: helper2Office,
+      category: helper2Category,
+      itemName: helper2ItemName,
+      quantity: qty,
+      staffName: finalStaff
+    };
+    const nextStaffWithdrawals = [newStaffWithdrawal, ...staffWithdrawals];
+    setStaffWithdrawals(nextStaffWithdrawals);
+
+    const nextStaff = staff.includes(finalStaff) ? staff : [...staff, finalStaff];
+    setStaff(nextStaff);
+
+    saveLocalCache({
+      stockpiles: updatedStockpiles,
+      staffWithdrawals: nextStaffWithdrawals,
+      staff: nextStaff
+    });
+
+    try {
+      localStorage.setItem("momo_last_staff", finalStaff);
+      setStaffInput(finalStaff); // sync with Tab 1
+    } catch {}
+
+    const unit = getHelper2ItemUnit(helper2ItemName);
+    setHelper2WithdrawalSuccess(`「${helper2ItemName}」を ${qty} ${unit}、${helper2Office}宛てに出庫登録しました（残り倉庫在庫: ${nextStock}${unit}）。`);
+    showToast(`「${helper2ItemName}」を ${qty}${unit} 出庫登録しました（残: ${nextStock}${unit}）`, "success");
+
+    setHelper2Quantity(1);
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    const localISO = new Date(now.getTime() - tzOffset).toISOString().substring(0, 16);
+    setHelper2WithdrawDate(localISO);
+
+    setTimeout(() => {
+      setHelper2WithdrawalSuccess(null);
+    }, 4500);
+
+    // Background sync to server API
     try {
       const res = await fetch("/api/staff-withdrawals", {
         method: "POST",
@@ -1227,45 +1391,25 @@ export default function App() {
           office: helper2Office,
           category: helper2Category,
           itemName: helper2ItemName,
-          quantity: helper2Quantity,
+          quantity: qty,
           staffName: finalStaff,
           date: helper2WithdrawDate || null
         })
       });
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "登録に失敗しました");
+      if (res.ok) {
+        const result = await res.json();
+        if (result?.data?.stockpiles) setStockpiles(result.data.stockpiles);
+        if (result?.data?.staff) setStaff(result.data.staff);
+        if (result?.data?.staffWithdrawals) setStaffWithdrawals(result.data.staffWithdrawals);
+        saveLocalCache({
+          stockpiles: result.data.stockpiles,
+          staff: result.data.staff,
+          staffWithdrawals: result.data.staffWithdrawals
+        });
       }
-      const result = await res.json();
-
-      // Save last staff name
-      localStorage.setItem("momo_last_staff", finalStaff);
-      setStaffInput(finalStaff); // sync with Tab 1
-
-      // Update local states
-      setStockpiles(result.data.stockpiles);
-      setStaff(result.data.staff);
-      setStaffWithdrawals(result.data.staffWithdrawals || []);
-      saveLocalCache({
-        stockpiles: result.data.stockpiles,
-        staff: result.data.staff
-      });
-
-      setHelper2WithdrawalSuccess(`「${helper2ItemName}」を ${helper2Quantity} ${getHelper2ItemUnit(helper2ItemName)}、${helper2Office}宛てに登録しました。在庫数も自動的にマイナスされました。`);
-      setHelper2Quantity(1);
-
-      const now = new Date();
-      const tzOffset = now.getTimezoneOffset() * 60000;
-      const localISO = new Date(now.getTime() - tzOffset).toISOString().substring(0, 16);
-      setHelper2WithdrawDate(localISO);
-
-      setTimeout(() => {
-        setHelper2WithdrawalSuccess(null);
-      }, 4000);
-
     } catch (err: any) {
-      alert(err.message || "エラーが発生しました");
+      console.warn("Staff withdrawal server sync notice (local change preserved):", err);
     }
   };
 
@@ -1310,23 +1454,115 @@ export default function App() {
     }
   };
 
-  // Delete Withdrawal entry
+  // Delete Withdrawal entry (利用者向け出庫履歴の削除 & 商品在庫の自動復元)
   const handleDeleteWithdrawal = (id: string) => {
+    const target = withdrawals.find(w => w.id === id);
+    const targetName = target ? `${target.userName} 宛て 「${target.product?.name || "物品"}」 (${target.quantity}個)` : "出庫履歴";
     showConfirm(
-      "払い出し履歴の削除",
-      "この払い出し履歴を完全に削除しますか？ (倉庫の在庫数は自動で戻りません。必要に応じて備蓄管理画面で手動で調整してください)",
+      "出庫履歴の削除",
+      `「${targetName}」の出庫履歴を削除しますか？\n（※出庫されていた数量分の商品在庫は自動的に倉庫へ戻ります）`,
       async () => {
+        // Optimistic local delete and restore product stock
+        let updatedProducts = products;
+        if (target) {
+          const qty = Number(target.quantity) || 1;
+          updatedProducts = products.map(p => {
+            if (p.id === target.productId || (target.product && p.id === target.product.id)) {
+              return { ...p, currentStock: (Number(p.currentStock) || 0) + qty };
+            }
+            return p;
+          });
+          setProducts(updatedProducts);
+        }
+
+        const remaining = withdrawals.filter(w => w.id !== id);
+        setWithdrawals(remaining);
+        saveLocalCache({ products: updatedProducts, withdrawals: remaining });
+
         try {
           const res = await fetch(`/api/withdrawals/${id}`, { method: "DELETE" });
-          if (!res.ok) throw new Error("削除に失敗しました");
-          const result = await res.json();
-          setWithdrawals(result.data.withdrawals);
-          showToast("払い出し履歴を削除しました", "success");
+          if (res.ok) {
+            const result = await res.json();
+            if (result?.data?.withdrawals) setWithdrawals(result.data.withdrawals);
+            if (result?.data?.products) setProducts(result.data.products);
+            saveLocalCache({ withdrawals: result.data.withdrawals, products: result.data.products });
+          }
+          showToast("出庫履歴を削除し、在庫を元に戻しました", "success");
         } catch (err: any) {
-          showToast(err.message || "削除に失敗しました", "error");
+          console.warn("Delete withdrawal notice:", err);
+          showToast("出庫履歴を削除しました", "success");
         }
       },
       "削除する"
+    );
+  };
+
+  // Delete Staff Withdrawal entry (職員・BCP出庫履歴の削除 & 備蓄在庫の自動復元)
+  const handleDeleteStaffWithdrawal = (id: string) => {
+    const target = staffWithdrawals.find(sw => sw.id === id);
+    const itemName = target ? `${target.office}宛て 「${target.itemName}」 (${target.quantity}個)` : "職員出庫履歴";
+    showConfirm(
+      "職員出庫履歴の削除",
+      `「${itemName}」の出庫履歴を削除しますか？\n（※出庫されていた数量分の備蓄在庫は自動的に倉庫へ戻ります）`,
+      async () => {
+        // Optimistic local delete and restore stockpile stock
+        let updatedStockpiles = stockpiles;
+        if (target) {
+          const normInput = normalizeName(target.itemName);
+          const qty = Number(target.quantity) || 1;
+          updatedStockpiles = stockpiles.map(s => {
+            const sNorm = normalizeName(s.name);
+            if (sNorm === normInput || sNorm.includes(normInput) || normInput.includes(sNorm)) {
+              return { ...s, currentStock: (Number(s.currentStock) || 0) + qty };
+            }
+            return s;
+          });
+          setStockpiles(updatedStockpiles);
+        }
+
+        const remaining = staffWithdrawals.filter(sw => sw.id !== id);
+        setStaffWithdrawals(remaining);
+        saveLocalCache({ stockpiles: updatedStockpiles, staffWithdrawals: remaining });
+
+        try {
+          const res = await fetch(`/api/staff-withdrawals/${id}`, { method: "DELETE" });
+          if (res.ok) {
+            const result = await res.json();
+            if (result?.data?.stockpiles) setStockpiles(result.data.stockpiles);
+            if (result?.data?.staffWithdrawals) setStaffWithdrawals(result.data.staffWithdrawals);
+            saveLocalCache({ stockpiles: result.data.stockpiles, staffWithdrawals: result.data.staffWithdrawals });
+          }
+          showToast("職員出庫履歴を削除し、備蓄在庫を元に戻しました", "success");
+        } catch (err: any) {
+          console.warn("Delete staff withdrawal notice:", err);
+          showToast("職員出庫履歴を削除しました", "success");
+        }
+      },
+      "削除する"
+    );
+  };
+
+  // Clear all staff withdrawals history (職員出庫履歴の全消去)
+  const handleClearStaffWithdrawals = () => {
+    showConfirm(
+      "職員・BCP出庫履歴の全削除",
+      "登録されている全ての職員・BCP出庫履歴を削除しますか？（※倉庫の現在の在庫数はそのまま維持されます）\n何ヶ月分も溜まった古い履歴を整理する際に実行してください。",
+      async () => {
+        setStaffWithdrawals([]);
+        saveLocalCache({ staffWithdrawals: [] });
+        try {
+          const res = await fetch("/api/staff-withdrawals/clear", { method: "POST" });
+          if (res.ok) {
+            const result = await res.json();
+            if (result?.data?.staffWithdrawals) setStaffWithdrawals(result.data.staffWithdrawals);
+            saveLocalCache({ staffWithdrawals: result.data.staffWithdrawals });
+          }
+          showToast("全ての職員出庫履歴を削除しました", "success");
+        } catch (err: any) {
+          showToast("履歴を削除しました", "success");
+        }
+      },
+      "すべて消去する"
     );
   };
 
@@ -1975,9 +2211,163 @@ export default function App() {
     });
   }, [products, printFilter, filteredProducts, PROD_CAT_PRIORITY]);
 
-  const openPrintModal = (target?: "bcp" | "diaper" | "all") => {
+  // Unified Withdrawal Records (スマホ出庫① & ②を完全統合・日付順)
+  type UnifiedWithdrawal = {
+    id: string;
+    kind: "user" | "staff";
+    date: string;
+    rawDate: string;
+    dateOnly: string;
+    timeOnly: string;
+    staffName: string;
+    targetName: string;
+    itemName: string;
+    category?: string;
+    quantity: number;
+    unit: string;
+    billingMonth?: string;
+  };
+
+  const unifiedHistoryRecords = useMemo<UnifiedWithdrawal[]>(() => {
+    const list: UnifiedWithdrawal[] = [];
+
+    // 1. 職員・BCP出庫 (スマホ出庫②)
+    staffWithdrawals.forEach(sw => {
+      const fullDate = sw.date || "";
+      const dOnly = fullDate.split(" ")[0] || fullDate.split("T")[0] || "";
+      const tOnly = fullDate.includes(" ") ? fullDate.split(" ")[1] : (fullDate.includes("T") ? fullDate.split("T")[1].substring(0, 5) : "");
+      list.push({
+        id: sw.id,
+        kind: "staff",
+        date: fullDate,
+        rawDate: fullDate,
+        dateOnly: dOnly,
+        timeOnly: tOnly,
+        staffName: sw.staffName || "未指定",
+        targetName: sw.office || "サ高住",
+        itemName: sw.itemName,
+        category: sw.category,
+        quantity: sw.quantity || 1,
+        unit: getHelper2ItemUnit(sw.itemName),
+        billingMonth: getBillingMonth(fullDate)
+      });
+    });
+
+    // 2. 利用者販売出庫 (スマホ出庫①)
+    withdrawals.forEach(w => {
+      const fullDate = w.date || "";
+      const dOnly = fullDate.split(" ")[0] || fullDate.split("T")[0] || "";
+      const tOnly = fullDate.includes(" ") ? fullDate.split(" ")[1] : (fullDate.includes("T") ? fullDate.split("T")[1].substring(0, 5) : "");
+      list.push({
+        id: w.id,
+        kind: "user",
+        date: fullDate,
+        rawDate: fullDate,
+        dateOnly: dOnly,
+        timeOnly: tOnly,
+        staffName: w.staffName || "担当ヘルパー",
+        targetName: w.userName,
+        itemName: `${w.product?.maker || ""} ${w.product?.name || "商品"}`.trim(),
+        category: w.product?.category,
+        quantity: w.quantity || 1,
+        unit: "個",
+        billingMonth: w.billingMonth
+      });
+    });
+
+    // Sort by date desc (newest first)
+    list.sort((a, b) => (b.rawDate || "").localeCompare(a.rawDate || ""));
+    return list;
+  }, [staffWithdrawals, withdrawals]);
+
+  // Filtered Unified History Records
+  const filteredHistoryRecords = useMemo(() => {
+    return unifiedHistoryRecords.filter(r => {
+      // Type Filter
+      if (historyTypeFilter === "user" && r.kind !== "user") return false;
+      if (historyTypeFilter === "staff" && r.kind !== "staff") return false;
+
+      // Month Filter
+      if (historyMonthFilter !== "全て") {
+        if (r.billingMonth && r.billingMonth === historyMonthFilter) {
+          // match
+        } else if (r.dateOnly.includes(historyMonthFilter.replace("月", ""))) {
+          // match
+        } else {
+          return false;
+        }
+      }
+
+      // Search Query
+      if (historySearchQuery.trim()) {
+        const q = historySearchQuery.trim().toLowerCase();
+        const matchStaff = (r.staffName || "").toLowerCase().includes(q);
+        const matchTarget = (r.targetName || "").toLowerCase().includes(q);
+        const matchItem = (r.itemName || "").toLowerCase().includes(q);
+        const matchCat = (r.category || "").toLowerCase().includes(q);
+        if (!matchStaff && !matchTarget && !matchItem && !matchCat) return false;
+      }
+
+      return true;
+    });
+  }, [unifiedHistoryRecords, historyTypeFilter, historyMonthFilter, historySearchQuery]);
+
+  // Grouped by Date (日付毎にリストアップ)
+  const groupedHistoryByDate = useMemo(() => {
+    const groups: { dateKey: string; formattedDate: string; records: UnifiedWithdrawal[] }[] = [];
+    const map = new Map<string, UnifiedWithdrawal[]>();
+
+    filteredHistoryRecords.forEach(r => {
+      const key = r.dateOnly || "日付未設定";
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(r);
+    });
+
+    map.forEach((records, dateKey) => {
+      let formattedDate = dateKey;
+      try {
+        const parts = dateKey.split("-");
+        if (parts.length === 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          const d = parseInt(parts[2], 10);
+          const dow = ["日", "月", "火", "水", "木", "金", "土"][new Date(y, m - 1, d).getDay()];
+          formattedDate = `${y}年${m}月${d}日 (${dow})`;
+        }
+      } catch {}
+      groups.push({ dateKey, formattedDate, records });
+    });
+
+    return groups;
+  }, [filteredHistoryRecords]);
+
+  // Today & Month Stats
+  const todayDateStr = useMemo(() => {
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - tzOffset).toISOString().substring(0, 10);
+  }, []);
+
+  const todayHistoryCount = useMemo(() => {
+    return unifiedHistoryRecords.filter(r => r.dateOnly === todayDateStr).length;
+  }, [unifiedHistoryRecords, todayDateStr]);
+
+  const thisMonthHistoryCount = useMemo(() => {
+    const prefix = todayDateStr.substring(0, 7);
+    return unifiedHistoryRecords.filter(r => r.dateOnly.startsWith(prefix)).length;
+  }, [unifiedHistoryRecords, todayDateStr]);
+
+  const printableHistory = useMemo(() => {
+    return filteredHistoryRecords;
+  }, [filteredHistoryRecords]);
+
+  const openPrintModal = (target?: "bcp" | "diaper" | "history" | "all") => {
     if (target) {
       setPrintTarget(target);
+    } else if (activeTab === "history") {
+      setPrintTarget("history");
     } else {
       setPrintTarget(stockSubTab === "diaper" ? "diaper" : "bcp");
     }
@@ -1988,6 +2378,38 @@ export default function App() {
     setTimeout(() => {
       window.print();
     }, 50);
+  };
+
+  const handleExportHistoryCSV = () => {
+    if (unifiedHistoryRecords.length === 0) {
+      showToast("エクスポート対象の出庫履歴がありません", "info");
+      return;
+    }
+    const headers = ["出庫区分", "出庫日時", "日付", "時刻", "出庫先・対象者", "出庫品名", "カテゴリー", "数量", "単位", "担当職員", "請求月"];
+    const rows = filteredHistoryRecords.map(r => [
+      r.kind === "user" ? "利用者販売(①)" : "施設・BCP備蓄(②)",
+      `"${r.date}"`,
+      `"${r.dateOnly}"`,
+      `"${r.timeOnly}"`,
+      `"${(r.targetName || "").replace(/"/g, '""')}"`,
+      `"${(r.itemName || "").replace(/"/g, '""')}"`,
+      `"${(r.category || "").replace(/"/g, '""')}"`,
+      r.quantity,
+      `"${r.unit}"`,
+      `"${(r.staffName || "").replace(/"/g, '""')}"`,
+      `"${(r.billingMonth || "").replace(/"/g, '""')}"`
+    ]);
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `出庫記録一覧_${new Date().toISOString().substring(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast("出庫記録のCSVをダウンロードしました", "success");
   };
 
   return (
@@ -2136,6 +2558,26 @@ export default function App() {
                 {(activeStockAlertsCount + activeDiaperAlertsCount) > 0 && (
                   <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full animate-pulse">
                     {activeStockAlertsCount + activeDiaperAlertsCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setActiveTab("history")}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg whitespace-nowrap transition-all relative ${
+                  activeTab === "history"
+                    ? "bg-amber-600 text-white shadow-sm font-extrabold"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`}
+                id="tab-btn-history"
+              >
+                <Clock className="h-4 w-4" />
+                出庫記録
+                {(withdrawals.length + staffWithdrawals.length) > 0 && (
+                  <span className={`ml-1.5 px-1.5 py-0.5 text-[10px] font-bold rounded-full font-mono ${
+                    activeTab === "history" ? "bg-white text-amber-900" : "bg-amber-100 text-amber-900 border border-amber-300"
+                  }`}>
+                    {withdrawals.length + staffWithdrawals.length}
                   </span>
                 )}
               </button>
@@ -2496,7 +2938,7 @@ export default function App() {
                   </button>
 
                   <p className="text-center text-[11px] text-slate-400 font-medium">
-                    ※登録すると、該当する倉庫のBCP備蓄在庫からも自動的に本数が減算されます。
+                    ※登録すると、利用者販売用の商品在庫から自動的に出庫分が減算されます。
                   </p>
 
                 </form>
@@ -2747,7 +3189,7 @@ export default function App() {
                   </button>
 
                   <p className="text-center text-[11px] text-slate-400 font-medium">
-                    ※登録すると、在庫管理（BCP備蓄）の在庫から自動的に本数が減算されます。
+                    ※登録すると、該当する倉庫のBCP備蓄在庫から自動的に数量が減算されます。
                   </p>
 
                 </form>
@@ -3304,33 +3746,42 @@ export default function App() {
 
             {/* Sub Tabs & Print/PDF Export for Stockpile View */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-white p-1.5 rounded-xl border border-slate-200 shadow-xs">
-              <div className="flex flex-1 gap-1">
+              <div className="flex flex-1 gap-1 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setStockSubTab('bcp')}
-                  className={`flex-1 py-2 text-center text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer ${
+                  className={`flex-1 min-w-[140px] py-2 text-center text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer ${
                     stockSubTab === 'bcp'
                       ? "bg-blue-600 text-white shadow-sm"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   }`}
                 >
-                  ① 【施設・ヘルパー用】非常災害用・BCP備蓄資材 ({stockpiles.length}品目)
+                  ① 非常災害用・BCP備蓄 ({stockpiles.length}品目)
                 </button>
                 <button
                   type="button"
                   onClick={() => setStockSubTab('diaper')}
-                  className={`flex-1 py-2 text-center text-xs sm:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`flex-1 min-w-[140px] py-2 text-center text-xs sm:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                     stockSubTab === 'diaper'
                       ? "bg-teal-600 text-white shadow-sm"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   }`}
                 >
-                  ② 【利用者販売用】おむつ類・介護手袋 ({products.length}品目)
+                  ② 利用者販売用物品 ({products.length}品目)
                   {activeDiaperAlertsCount > 0 && (
                     <span className="px-1.5 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full animate-pulse">
                       {activeDiaperAlertsCount}
                     </span>
                   )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('history')}
+                  className="flex-1 min-w-[140px] py-2 text-center text-xs sm:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200"
+                  title="クリックすると「出庫記録」タブへ移動します"
+                >
+                  <Clock className="h-4 w-4 text-amber-600" />
+                  <span>出庫記録一覧へ ({staffWithdrawals.length + withdrawals.length}件)</span>
                 </button>
               </div>
 
@@ -3605,540 +4056,871 @@ export default function App() {
                 </div>
 
               </div>
-            ) : (
-              /* Diaper stock status master list */
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-4 bg-teal-50/30 border-b border-teal-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
-                    <ClipboardList className="h-5 w-5 text-teal-600" />
-                    衛生商品・おむつ類 在庫状況一覧 ({products.length}品目)
-                  </h3>
+            ) : stockSubTab === "diaper" ? (
+              /* Subtab ②: 利用者販売用物品（おむつ・衛生用品）在庫管理 */
+              <div className="space-y-6">
+                
+                {/* Diaper & Hygiene Products Master Table */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                   
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => openPrintModal("diaper")}
-                      className="flex items-center gap-1.5 bg-white hover:bg-teal-50 text-teal-700 border border-teal-300 px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs transition cursor-pointer"
-                      title="このおむつ類・商品マスタ一覧を印刷、またはPDFファイルとして保存します"
-                    >
-                      <Printer className="h-3.5 w-3.5" />
-                      <span>印刷 / PDF</span>
-                    </button>
-                    <div className="text-xs text-slate-500 font-medium hidden sm:block">
-                      ※ ヘルパーの「スマホ出庫」での登録により、在庫数はリアルタイムで自動減算されます。
+                  {/* Table Header & Controls */}
+                  <div className="p-4 bg-teal-50/30 border-b border-teal-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
+                        <ClipboardList className="h-5 w-5 text-teal-600" />
+                        衛生商品・おむつ類 在庫状況一覧 ({filteredProducts.length}品目)
+                      </h3>
+                      <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                        ※ ヘルパーの「スマホ出庫①」で登録されるとリアルタイムで自動減算されます
+                      </p>
                     </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {/* Print & PDF Button */}
+                      <button
+                        type="button"
+                        onClick={() => openPrintModal("diaper")}
+                        className="flex items-center gap-1.5 bg-white hover:bg-teal-50 text-teal-700 border border-teal-300 px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs transition cursor-pointer"
+                        title="このおむつ類・商品マスタ一覧を印刷、またはPDFファイルとして保存します"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                        <span>印刷 / PDF</span>
+                      </button>
+
+                      {/* Search box */}
+                      <div className="relative min-w-[180px] sm:w-56">
+                        <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="商品名・メーカー・カテゴリ等で検索..."
+                          value={productSearchQuery}
+                          onChange={(e) => setProductSearchQuery(e.target.value)}
+                          className="w-full pl-8 pr-4 py-1.5 rounded-lg border border-slate-300 outline-none text-xs focus:ring-1 focus:ring-teal-500 bg-white"
+                        />
+                      </div>
+
+                      {/* Sort dropdown */}
+                      <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-700 shadow-xs">
+                        <ArrowUpDown className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+                        <span className="font-bold text-[11px] text-slate-500 shrink-0">並び順:</span>
+                        <select
+                          value={productSortBy}
+                          onChange={(e) => setProductSortBy(e.target.value)}
+                          className="bg-transparent font-semibold text-slate-800 outline-none cursor-pointer text-xs"
+                        >
+                          <option value="category">★ カテゴリー順</option>
+                          <option value="name">商品名順（50音）</option>
+                          <option value="maker">メーカー順</option>
+                          <option value="stock-asc">在庫が少ない順（要補充）</option>
+                          <option value="stock-desc">在庫が多い順</option>
+                          <option value="price-asc">販売単価が安い順</option>
+                          <option value="price-desc">販売単価が高い順</option>
+                          <option value="default">登録順</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Table Contents */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold select-none">
+                          <th className="p-3">状況</th>
+                          <th className="p-3">カテゴリー</th>
+                          <th className="p-3">メーカー名</th>
+                          <th className="p-3">商品名（パッケージ名）</th>
+                          <th className="p-3 text-center">現在量（在庫数）</th>
+                          <th className="p-3 text-center">容量</th>
+                          <th className="p-3 text-center">サイズ</th>
+                          <th className="p-3 text-right">仕入税込単価</th>
+                          <th className="p-3 text-right">仕入税抜単価</th>
+                          <th className="p-3 text-right text-teal-700 font-extrabold bg-teal-50/20">販売単価(税込)</th>
+                          <th className="p-3 text-center">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredProducts.map((prod) => {
+                          const stockVal = prod.currentStock !== undefined ? prod.currentStock : 0;
+                          const isAlert = stockVal <= 2;
+                          return (
+                            <tr 
+                              key={prod.id} 
+                              className={`hover:bg-slate-50 transition-colors ${
+                                isAlert ? "bg-rose-50/40" : "bg-white"
+                              }`}
+                            >
+                              <td className="p-3 whitespace-nowrap">
+                                {stockVal === 0 ? (
+                                  <div className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white border border-rose-500 animate-pulse">
+                                    <span>🚨 在庫切れ (要発注!)</span>
+                                  </div>
+                                ) : stockVal <= 2 ? (
+                                  <div className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500 text-white border border-amber-400">
+                                    <span>⚠️ 在庫僅少 ({stockVal}個)</span>
+                                  </div>
+                                ) : (
+                                  <div className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    <Check className="h-3 w-3" />
+                                    <span>適正在庫</span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-3 font-semibold text-slate-500 whitespace-nowrap">{prod.category}</td>
+                              <td className="p-3 whitespace-nowrap">
+                                <span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-medium text-slate-700">
+                                  {prod.maker}
+                                </span>
+                              </td>
+                              <td className="p-3 font-bold text-slate-900 text-sm">{prod.name}</td>
+                              
+                              {/* In-place stock adjust with buttons & direct input */}
+                              <td className="p-3 text-center whitespace-nowrap">
+                                <div className="inline-flex items-center justify-center space-x-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleProductStockAdjust(prod.id, stockVal, -1)}
+                                    className="w-6 h-6 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                                    title="1つ減らす"
+                                  >
+                                    -
+                                  </button>
+                                  <input
+                                    type="number"
+                                    value={prod.currentStock === undefined || prod.currentStock === 0 ? "" : prod.currentStock}
+                                    placeholder="0"
+                                    onChange={(e) => handleProductStockSet(prod.id, parseInt(e.target.value, 10) || 0)}
+                                    className={`w-14 h-6 text-center font-bold font-mono border rounded text-xs bg-white outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                      isAlert ? "border-rose-400 text-rose-600 bg-rose-50/20" : "border-slate-300 text-slate-800"
+                                    }`}
+                                    title="数値を直接入力して上書きできます"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleProductStockAdjust(prod.id, stockVal, 1)}
+                                    className="w-6 h-6 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                                    title="1つ増やす"
+                                  >
+                                    +
+                                  </button>
+                                  <span className="text-slate-400 text-[10px] font-medium">個</span>
+                                </div>
+                              </td>
+
+                              <td className="p-3 text-center font-mono font-medium text-slate-500 whitespace-nowrap">{prod.capacity}</td>
+                              <td className="p-3 text-center font-bold text-slate-700 whitespace-nowrap">{prod.size}</td>
+                              <td className="p-3 text-right font-mono text-slate-600 whitespace-nowrap">¥{prod.priceInclTax.toLocaleString()}</td>
+                              <td className="p-3 text-right font-mono text-slate-400 whitespace-nowrap">¥{prod.priceExclTax.toLocaleString()}</td>
+                              <td className="p-3 text-right font-mono font-bold text-teal-800 text-sm whitespace-nowrap bg-teal-50/20">
+                                ¥{prod.sellingPrice.toLocaleString()}
+                              </td>
+                              
+                              <td className="p-3 text-center whitespace-nowrap">
+                                <div className="flex items-center justify-center space-x-1">
+                                  <button
+                                    onClick={() => openEditModal(prod)}
+                                    className="text-teal-600 hover:text-teal-800 p-1.5 rounded hover:bg-teal-50 transition cursor-pointer"
+                                    title="編集・上書き"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteProduct(prod.id)}
+                                    className="text-rose-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 transition cursor-pointer"
+                                    title="削除"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+
+                    {filteredProducts.length === 0 && (
+                      <div className="py-12 text-center text-slate-400">
+                        <p className="text-sm font-semibold">該当する商品が見つかりませんでした</p>
+                        {productSearchQuery && (
+                          <button
+                            onClick={() => setProductSearchQuery("")}
+                            className="mt-2 text-xs text-teal-600 underline font-semibold hover:text-teal-800 cursor-pointer"
+                          >
+                            検索条件をクリア
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
+                {/* Side-by-Side Admin Form Blocks */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  
+                  {/* Add New Stockpile Item Form */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h4 className="font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-1.5">
+                      <Plus className="h-4 w-4 text-slate-600" />
+                      新しい備蓄品（BCP備蓄）をリストに追加
+                    </h4>
+
+                    <form onSubmit={handleAddStockpile} className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
+                      <div className="space-y-1">
+                        <label className="font-bold">品目（備蓄品名） <span className="text-rose-500">*</span></label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="例：薬用ハンドソープ（5L)"
+                          value={newStockName}
+                          onChange={(e) => setNewStockName(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-slate-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold">単位 <span className="text-rose-500">*</span></label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="例：個、枚、本、箱"
+                          value={newStockUnit}
+                          onChange={(e) => setNewStockUnit(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold">初期備蓄量 <span className="text-rose-500">*</span></label>
+                        <input
+                          type="number"
+                          required
+                          placeholder="例：10"
+                          value={newStockQty}
+                          onChange={(e) => setNewStockQty(e.target.value === "" ? "" : Number(e.target.value))}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold">必要基準量（BCP目標） <span className="text-rose-500">*</span></label>
+                        <input
+                          type="number"
+                          required
+                          placeholder="例：10"
+                          value={newStockRequired}
+                          onChange={(e) => setNewStockRequired(e.target.value === "" ? "" : Number(e.target.value))}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold">保管場所</label>
+                        <input
+                          type="text"
+                          placeholder="例：5番館倉庫"
+                          value={newStockLocation}
+                          onChange={(e) => setNewStockLocation(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold flex items-center gap-1 text-slate-800">
+                          <span>出庫カテゴリー（スマホ出庫②）</span>
+                          <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                          value={newStockCategory}
+                          onChange={(e) => setNewStockCategory(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-emerald-500 bg-emerald-50/40 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                        >
+                          <option value="①衛生用品-1（日常業務用）">①衛生用品-1（日常業務用）</option>
+                          <option value="②衛生用品-2（BCP感染症対策）">②衛生用品-2（BCP感染症対策）</option>
+                          <option value="③消耗品類（洗剤など）">③消耗品類（洗剤など）</option>
+                          <option value="④デイサービス">④デイサービス</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1 sm:col-span-2">
+                        <label className="font-bold">備考</label>
+                        <input
+                          type="text"
+                          placeholder="例：手洗い場詰替え用。詰め替えパック2個で1箱"
+                          value={newStockNotes}
+                          onChange={(e) => setNewStockNotes(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="sm:col-span-2 mt-2 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition cursor-pointer shadow-sm"
+                      >
+                        備蓄品を登録する
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Add New Product to Master Catalog Form */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h4 className="font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-1.5">
+                      <Plus className="h-4 w-4 text-teal-600" />
+                      オムツ等販売用商品マスタへの手動登録
+                    </h4>
+
+                    <form onSubmit={handleAddProduct} className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
+                      
+                      <div className="space-y-1">
+                        <label className="font-bold">品目カテゴリー <span className="text-rose-500">*</span></label>
+                        <select
+                          value={newProdCategory}
+                          onChange={(e) => setNewProdCategory(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none bg-white"
+                        >
+                          <option value="尿取りパット類">①尿取りパット類</option>
+                          <option value="リハビリパンツ">②リハビリパンツ</option>
+                          <option value="テープ止めオムツ">③テープ止めオムツ</option>
+                          <option value="流せるおしりふき">④流せるおしりふき</option>
+                          <option value="PVC介護手袋">⑤PVC介護手袋</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold">メーカー名 <span className="text-rose-500">*</span></label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="例：リフレ"
+                          value={newProdMaker}
+                          onChange={(e) => setNewProdMaker(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1 sm:col-span-2">
+                        <label className="font-bold">商品名（パッケージ記載名） <span className="text-rose-500">*</span></label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="例：スピードキャッチパッド スーパー(10回吸収)"
+                          value={newProdName}
+                          onChange={(e) => setNewProdName(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold">容量</label>
+                        <input
+                          type="text"
+                          placeholder="例：30枚"
+                          value={newProdCapacity}
+                          onChange={(e) => setNewProdCapacity(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold">サイズ</label>
+                        <input
+                          type="text"
+                          placeholder="例：M、L、S"
+                          value={newProdSize}
+                          onChange={(e) => setNewProdSize(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold">仕入れ金額(税込価格) <span className="text-rose-500">*</span></label>
+                        <input
+                          type="number"
+                          required
+                          placeholder="例：2273"
+                          value={newProdPriceInclTax}
+                          onChange={(e) => setNewProdPriceInclTax(e.target.value === "" ? "" : Number(e.target.value))}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold">初期の現在庫数 <span className="text-rose-500">*</span></label>
+                        <input
+                          type="number"
+                          required
+                          placeholder="例：10"
+                          value={newProdCurrentStock}
+                          onChange={(e) => setNewProdCurrentStock(e.target.value === "" ? "" : Number(e.target.value))}
+                          className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500 font-mono font-bold text-slate-800"
+                        />
+                      </div>
+
+                      {/* Calculations Preview widget */}
+                      <div className="bg-slate-50 p-2.5 rounded border border-slate-200 text-[11px] text-slate-500 leading-tight space-y-1">
+                        <p className="font-bold text-slate-700">【自動計算値プレビュー】</p>
+                        <p>仕入税抜価格: {newProdPriceInclTax ? `¥${Math.round(newProdPriceInclTax / 1.1).toLocaleString()}` : "未入力"}</p>
+                        <p className="text-teal-700 font-semibold">販売価格(税抜の2割増): {newProdPriceInclTax ? `¥${Math.round(Math.round(newProdPriceInclTax / 1.1) * 1.2).toLocaleString()}` : "未入力"}</p>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="sm:col-span-2 mt-2 w-full py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded transition cursor-pointer shadow-sm"
+                      >
+                        商品をマスタへ登録する
+                      </button>
+                    </form>
+                  </div>
+
+                </div>
+
+              </div>
+          ) : (
+            /* Subtab ③: 出庫記録タブへの移動案内カード */
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center space-y-4">
+              <div className="inline-flex p-3 bg-amber-100 rounded-full text-amber-700">
+                <Clock className="h-8 w-8 stroke-[2]" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">出庫記録は専用タブで管理されています</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                現場職員様の使いやすさと一覧性の向上のため、「スマホ出庫①」と「スマホ出庫②」の出庫記録は、メニュー上の専用「出庫記録」タブにて日付毎に一括管理いただけます。
+              </p>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("history")}
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl transition shadow-md inline-flex items-center gap-2 cursor-pointer"
+                >
+                  <Clock className="h-4 w-4" />
+                  <span>「出庫記録」タブを開く（計 {withdrawals.length + staffWithdrawals.length}件）</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          </div>
+        )}
+
+        {/* =========================================================================
+            SCREEN 📋: Unified Withdrawal Records Screen (出庫記録タブ)
+            「在庫管理」の後に配置。スマホ出庫①・②を分けずに、出庫した全履歴を日付毎にリストアップ！
+            ========================================================================= */}
+        {activeTab === "history" && (
+          <div className="space-y-6">
+
+            {/* Header & KPI Summary */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 flex items-center gap-2 font-display">
+                    <span className="p-2 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                      <Clock className="h-6 w-6 stroke-[2.5]" />
+                    </span>
+                    出庫記録 一覧表
+                    <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                      計 {unifiedHistoryRecords.length}件
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    「スマホ出庫①（利用者個別販売）」および「スマホ出庫②（施設・BCP備蓄）」の全出庫が、日付毎に時系列でリストアップされます。
+                  </p>
+                </div>
+
+                {/* Top Action Buttons */}
+                <div className="flex items-center flex-wrap gap-2 text-xs shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => openPrintModal("history")}
+                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                    title="出庫記録一覧表をA4横向きで印刷、またはPDF保存します"
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>一覧表を印刷 / PDF保存</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExportHistoryCSV}
+                    className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                    title="全出庫履歴データをExcel・CSV形式でダウンロードします"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>CSVダウンロード</span>
+                  </button>
+
+                  {(staffWithdrawals.length > 0 || withdrawals.length > 0) && (
+                    <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2">
+                      {withdrawals.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleClearWithdrawals}
+                          className="px-2.5 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold transition flex items-center gap-1 cursor-pointer text-[11px]"
+                          title="利用者向け出庫履歴（スマホ出庫①）を全消去して整理します"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>①全削除</span>
+                        </button>
+                      )}
+                      {staffWithdrawals.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleClearStaffWithdrawals}
+                          className="px-2.5 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold transition flex items-center gap-1 cursor-pointer text-[11px]"
+                          title="施設・BCP出庫履歴（スマホ出庫②）を全消去して整理します"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>②全削除</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* KPI Stat Chips */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100 text-xs">
+                <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200/60 flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] text-amber-700 font-bold">全出庫 累計</div>
+                    <div className="text-lg font-black text-amber-950 font-mono mt-0.5">{unifiedHistoryRecords.length} <span className="text-xs font-normal">件</span></div>
+                  </div>
+                  <Package className="h-6 w-6 text-amber-400 shrink-0" />
+                </div>
+
+                <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-200/60 flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] text-blue-700 font-bold">本日 ({todayDateStr})</div>
+                    <div className="text-lg font-black text-blue-950 font-mono mt-0.5">{todayHistoryCount} <span className="text-xs font-normal">件</span></div>
+                  </div>
+                  <Calendar className="h-6 w-6 text-blue-400 shrink-0" />
+                </div>
+
+                <div className="bg-pink-50/60 p-3 rounded-xl border border-pink-200/60 flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] text-pink-700 font-bold">👤 スマホ出庫①（利用者）</div>
+                    <div className="text-lg font-black text-pink-950 font-mono mt-0.5">{withdrawals.length} <span className="text-xs font-normal">件</span></div>
+                  </div>
+                  <Smartphone className="h-6 w-6 text-pink-400 shrink-0" />
+                </div>
+
+                <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-200/60 flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] text-emerald-700 font-bold">🏢 スマホ出庫②（施設BCP）</div>
+                    <div className="text-lg font-black text-emerald-950 font-mono mt-0.5">{staffWithdrawals.length} <span className="text-xs font-normal">件</span></div>
+                  </div>
+                  <Smartphone className="h-6 w-6 text-emerald-400 shrink-0" />
+                </div>
+              </div>
+            </div>
+
+            {/* Filters & Search Toolbar */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between text-xs">
+              
+              {/* Type Filter Buttons */}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 font-bold shrink-0 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setHistoryTypeFilter("all")}
+                  className={`px-3 py-1.5 rounded-md transition cursor-pointer ${
+                    historyTypeFilter === "all"
+                      ? "bg-slate-900 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  全て表示 ({unifiedHistoryRecords.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryTypeFilter("user")}
+                  className={`px-3 py-1.5 rounded-md transition cursor-pointer flex items-center gap-1 ${
+                    historyTypeFilter === "user"
+                      ? "bg-pink-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>👤 利用者販売 (①)</span>
+                  <span className="font-mono text-[10px] opacity-80">({withdrawals.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryTypeFilter("staff")}
+                  className={`px-3 py-1.5 rounded-md transition cursor-pointer flex items-center gap-1 ${
+                    historyTypeFilter === "staff"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <span>🏢 施設・BCP (②)</span>
+                  <span className="font-mono text-[10px] opacity-80">({staffWithdrawals.length})</span>
+                </button>
+              </div>
+
+              {/* Month & Search */}
+              <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center flex-1 justify-end">
+                {/* Month Dropdown */}
+                <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
+                  <span className="font-bold text-slate-600 shrink-0">表示月:</span>
+                  <select
+                    value={historyMonthFilter}
+                    onChange={(e) => setHistoryMonthFilter(e.target.value)}
+                    className="bg-transparent font-semibold text-slate-800 outline-none cursor-pointer"
+                  >
+                    <option value="全て">全ての月（全期間）</option>
+                    {uniqueMonths.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Realtime Search Input */}
+                <div className="relative min-w-[220px] sm:w-72">
+                  <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="誰が・出庫先・品名で検索..."
+                    value={historySearchQuery}
+                    onChange={(e) => setHistorySearchQuery(e.target.value)}
+                    className="w-full pl-8 pr-6 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  />
+                  {historySearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setHistorySearchQuery("")}
+                      className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                {/* View Mode Switcher */}
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-[11px] font-bold shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setHistoryViewMode("grouped")}
+                    className={`px-2.5 py-1 rounded transition cursor-pointer flex items-center gap-1 ${
+                      historyViewMode === "grouped"
+                        ? "bg-white text-amber-900 shadow-xs border border-slate-200"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title="日付毎にリストアップしてグループ表示します"
+                  >
+                    <Calendar className="h-3 w-3" />
+                    <span>日付毎グループ</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryViewMode("table")}
+                    className={`px-2.5 py-1 rounded transition cursor-pointer flex items-center gap-1 ${
+                      historyViewMode === "table"
+                        ? "bg-white text-amber-900 shadow-xs border border-slate-200"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title="全件をひとつのテーブルに連続表示します"
+                  >
+                    <FileSpreadsheet className="h-3 w-3" />
+                    <span>全件一覧表</span>
+                  </button>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* List / Table Area */}
+            {filteredHistoryRecords.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
+                <div className="inline-flex p-3 bg-amber-50 rounded-full text-amber-600">
+                  <Clock className="h-8 w-8 stroke-[1.5]" />
+                </div>
+                <h3 className="text-base font-bold text-slate-800">
+                  該当する出庫記録はありません
+                </h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  {historySearchQuery || historyMonthFilter !== "全て" || historyTypeFilter !== "all"
+                    ? "検索条件または絞り込み条件に一致する履歴が見つかりませんでした。"
+                    : "「スマホ出庫①」または「スマホ出庫②」から出庫を登録すると、ここに日付毎に自動でリストアップされます。"}
+                </p>
+                {(historySearchQuery || historyMonthFilter !== "全て" || historyTypeFilter !== "all") && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHistorySearchQuery("");
+                        setHistoryMonthFilter("全て");
+                        setHistoryTypeFilter("all");
+                      }}
+                      className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition cursor-pointer"
+                    >
+                      条件をリセットして全件表示
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : historyViewMode === "grouped" ? (
+              /* Grouped by Date (日付毎にリストアップ - ユーザー様の第一要望) */
+              <div className="space-y-4">
+                {groupedHistoryByDate.map((group) => (
+                  <div key={group.dateKey} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    {/* Date Header */}
+                    <div className="bg-amber-500/10 border-b border-amber-200/70 px-4 py-2.5 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-amber-700 shrink-0" />
+                        <span className="font-extrabold text-slate-900 text-sm">
+                          {group.formattedDate}
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-mono">
+                          ({group.dateKey})
+                        </span>
+                      </div>
+                      <span className="text-xs bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 rounded-full border border-amber-300">
+                        本日 {group.records.length}件の出庫
+                      </span>
+                    </div>
+
+                    {/* Table for this date */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                          <tr>
+                            <th className="py-2.5 px-3 whitespace-nowrap text-center w-20">登録時刻</th>
+                            <th className="py-2.5 px-3 whitespace-nowrap w-28">出庫区分</th>
+                            <th className="py-2.5 px-3 whitespace-nowrap w-36">出庫先・対象者</th>
+                            <th className="py-2.5 px-3">出庫品目・商品名</th>
+                            <th className="py-2.5 px-3 text-right whitespace-nowrap w-24">出庫数量</th>
+                            <th className="py-2.5 px-3 whitespace-nowrap w-28">担当職員</th>
+                            <th className="py-2.5 px-3 text-center whitespace-nowrap w-20">操作</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {group.records.map((r) => (
+                            <tr key={`${r.kind}-${r.id}`} className="hover:bg-amber-50/20 transition">
+                              <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-600 whitespace-nowrap">
+                                {r.timeOnly || "-"}
+                              </td>
+                              <td className="py-2.5 px-3 whitespace-nowrap">
+                                {r.kind === "staff" ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    🏢 施設・BCP (②)
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-800 border border-pink-200">
+                                    👤 利用者販売 (①)
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 font-bold text-slate-900 whitespace-nowrap">
+                                {r.targetName}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="font-bold text-slate-900">{r.itemName}</div>
+                                {r.category && (
+                                  <div className="text-[10px] text-slate-400">{r.category}</div>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800 whitespace-nowrap">
+                                <span className="text-sm">{r.quantity}</span> <span className="text-[11px] text-slate-500 font-normal">{r.unit}</span>
+                              </td>
+                              <td className="py-2.5 px-3 font-semibold text-slate-700 whitespace-nowrap">
+                                {r.staffName || "-"}
+                              </td>
+                              <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (r.kind === "staff") {
+                                      handleDeleteStaffWithdrawal(r.id);
+                                    } else {
+                                      handleDeleteWithdrawal(r.id);
+                                    }
+                                  }}
+                                  className="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer"
+                                  title="この出庫を取り消し（在庫は自動的に倉庫へ戻ります）"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <span>削除</span>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* Flat Continuous Table View (全件一覧表) */
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold select-none">
-                        <th className="p-3">状況</th>
-                        <th className="p-3">カテゴリー</th>
-                        <th className="p-3">メーカー名</th>
-                        <th className="p-3">商品名（パッケージ名）</th>
-                        <th className="p-3 text-center">現在量（在庫数）</th>
-                        <th className="p-3 text-center">容量</th>
-                        <th className="p-3 text-center">サイズ</th>
-                        <th className="p-3 text-right">販売単価(税込)</th>
-                        <th className="p-3 text-center">操作</th>
+                    <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-3 whitespace-nowrap">出庫区分</th>
+                        <th className="py-2.5 px-3 whitespace-nowrap">出庫日時</th>
+                        <th className="py-2.5 px-3 whitespace-nowrap">出庫先・対象者</th>
+                        <th className="py-2.5 px-3">出庫品目・商品名</th>
+                        <th className="py-2.5 px-3 text-right whitespace-nowrap">出庫数量</th>
+                        <th className="py-2.5 px-3 whitespace-nowrap">担当職員</th>
+                        <th className="py-2.5 px-3 text-center whitespace-nowrap">操作</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {products.map((prod) => {
-                        const stockVal = prod.currentStock !== undefined ? prod.currentStock : 0;
-                        const isAlert = stockVal <= 2;
-                        return (
-                          <tr 
-                            key={prod.id} 
-                            className={`hover:bg-slate-50 transition-colors ${
-                              isAlert ? "bg-rose-50/40" : "bg-white"
-                            }`}
-                          >
-                            <td className="p-3">
-                              {stockVal === 0 ? (
-                                <div className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white border border-rose-500 animate-pulse">
-                                  <span>🚨 在庫切れ (要発注!)</span>
-                                </div>
-                              ) : stockVal <= 2 ? (
-                                <div className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500 text-white border border-amber-400">
-                                  <span>⚠️ 在庫僅少 ({stockVal}個)</span>
-                                </div>
-                              ) : (
-                                <div className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                  <Check className="h-3 w-3" />
-                                  <span>適正在庫</span>
-                                </div>
-                              )}
-                            </td>
-                            <td className="p-3 font-semibold text-slate-500">{prod.category}</td>
-                            <td className="p-3">
-                              <span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-medium text-slate-700">
-                                {prod.maker}
+                      {filteredHistoryRecords.map((r) => (
+                        <tr key={`${r.kind}-${r.id}`} className="hover:bg-amber-50/20 transition">
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            {r.kind === "staff" ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                🏢 施設・BCP (②)
                               </span>
-                            </td>
-                            <td className="p-3 font-bold text-slate-900 text-sm">{prod.name}</td>
-                            
-                            {/* In-place stock adjust with buttons & input like stockpiles */}
-                            <td className="p-3 text-center whitespace-nowrap">
-                              <div className="inline-flex items-center justify-center space-x-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleProductStockAdjust(prod.id, stockVal, -1)}
-                                  className="w-6 h-6 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-                                  title="1つ減らす"
-                                >
-                                  -
-                                </button>
-                                <input
-                                  type="number"
-                                  value={prod.currentStock === undefined || prod.currentStock === 0 ? "" : prod.currentStock}
-                                  placeholder="0"
-                                  onChange={(e) => handleProductStockSet(prod.id, parseInt(e.target.value, 10) || 0)}
-                                  className={`w-14 h-6 text-center font-bold font-mono border rounded text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                    isAlert ? "border-rose-400 text-rose-600 bg-rose-50/20" : "border-slate-300 text-slate-800"
-                                  }`}
-                                  title="数値を直接入力して上書きできます"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleProductStockAdjust(prod.id, stockVal, 1)}
-                                  className="w-6 h-6 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-                                  title="1つ増やす"
-                                >
-                                  +
-                                </button>
-                                <span className="text-slate-400 text-[10px] font-medium">個</span>
-                              </div>
-                            </td>
-
-                            <td className="p-3 text-center font-mono font-medium text-slate-500">{prod.capacity}</td>
-                            <td className="p-3 text-center font-bold text-slate-700">{prod.size}</td>
-                            <td className="p-3 text-right font-mono font-bold text-slate-700">¥{prod.sellingPrice.toLocaleString()}</td>
-                            
-                            <td className="p-3 text-center">
-                              <div className="flex items-center justify-center space-x-1">
-                                <button
-                                  onClick={() => openEditModal(prod)}
-                                  className="text-teal-600 hover:text-teal-800 p-1.5 rounded hover:bg-teal-50 transition"
-                                  title="編集・上書き"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteProduct(prod.id)}
-                                  className="text-rose-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 transition"
-                                  title="削除"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-800 border border-pink-200">
+                                👤 利用者販売 (①)
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-medium text-slate-600 whitespace-nowrap">
+                            {r.date}
+                          </td>
+                          <td className="py-2.5 px-3 font-bold text-slate-900 whitespace-nowrap">
+                            {r.targetName}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <div className="font-bold text-slate-900">{r.itemName}</div>
+                            {r.category && (
+                              <div className="text-[10px] text-slate-400">{r.category}</div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800 whitespace-nowrap">
+                            <span className="text-sm">{r.quantity}</span> <span className="text-[11px] text-slate-500 font-normal">{r.unit}</span>
+                          </td>
+                          <td className="py-2.5 px-3 font-semibold text-slate-700 whitespace-nowrap">
+                            {r.staffName || "-"}
+                          </td>
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (r.kind === "staff") {
+                                  handleDeleteStaffWithdrawal(r.id);
+                                } else {
+                                  handleDeleteWithdrawal(r.id);
+                                }
+                              }}
+                              className="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer"
+                              title="この出庫を取り消し（在庫は自動的に倉庫へ戻ります）"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span>削除</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
               </div>
             )}
-
-            {/* Side-by-Side Admin Form Blocks */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
-              {/* Add New Stockpile Item Form */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <h4 className="font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-1.5">
-                  <Plus className="h-4 w-4 text-slate-600" />
-                  新しい備蓄品（BCP備蓄）をリストに追加
-                </h4>
-
-                <form onSubmit={handleAddStockpile} className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
-                  <div className="space-y-1">
-                    <label className="font-bold">品目（備蓄品名） <span className="text-rose-500">*</span></label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="例：薬用ハンドソープ（5L)"
-                      value={newStockName}
-                      onChange={(e) => setNewStockName(e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-slate-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold">単位 <span className="text-rose-500">*</span></label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="例：個、枚、本、箱"
-                      value={newStockUnit}
-                      onChange={(e) => setNewStockUnit(e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold">初期備蓄量 <span className="text-rose-500">*</span></label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="例：10"
-                      value={newStockQty}
-                      onChange={(e) => setNewStockQty(e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold">必要基準量（BCP目標） <span className="text-rose-500">*</span></label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="例：10"
-                      value={newStockRequired}
-                      onChange={(e) => setNewStockRequired(e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold">保管場所</label>
-                    <input
-                      type="text"
-                      placeholder="例：5番館倉庫"
-                      value={newStockLocation}
-                      onChange={(e) => setNewStockLocation(e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold flex items-center gap-1 text-slate-800">
-                      <span>出庫カテゴリー（スマホ出庫②）</span>
-                      <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={newStockCategory}
-                      onChange={(e) => setNewStockCategory(e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-emerald-500 bg-emerald-50/40 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="①衛生用品-1（日常業務用）">①衛生用品-1（日常業務用）</option>
-                      <option value="②衛生用品-2（BCP感染症対策）">②衛生用品-2（BCP感染症対策）</option>
-                      <option value="③消耗品類（洗剤など）">③消耗品類（洗剤など）</option>
-                      <option value="④デイサービス">④デイサービス</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold">備考</label>
-                    <input
-                      type="text"
-                      placeholder="例：手洗い場詰替え用。詰め替えパック2個で1箱"
-                      value={newStockNotes}
-                      onChange={(e) => setNewStockNotes(e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="sm:col-span-2 mt-2 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition cursor-pointer shadow-sm"
-                  >
-                    備蓄品を登録する
-                  </button>
-                </form>
-              </div>
-
-              {/* Add New Product to Master Catalog Form */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <h4 className="font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-1.5">
-                  <Plus className="h-4 w-4 text-blue-600" />
-                  オムツ等販売用商品マスタへの手動登録
-                </h4>
-
-                <form onSubmit={handleAddProduct} className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
-                  
-                  <div className="space-y-1">
-                    <label className="font-bold">品目カテゴリー <span className="text-rose-500">*</span></label>
-                    <select
-                      value={newProdCategory}
-                      onChange={(e) => setNewProdCategory(e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none bg-white"
-                    >
-                      <option value="尿取りパット類">①尿取りパット類</option>
-                      <option value="リハビリパンツ">②リハビリパンツ</option>
-                      <option value="テープ止めオムツ">③テープ止めオムツ</option>
-                      <option value="流せるおしりふき">④流せるおしりふき</option>
-                      <option value="PVC介護手袋">⑤PVC介護手袋</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold">メーカー名 <span className="text-rose-500">*</span></label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="例：リフレ"
-                      value={newProdMaker}
-                      onChange={(e) => setNewProdMaker(e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold">商品名（パッケージ記載名） <span className="text-rose-500">*</span></label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="例：スピードキャッチパッド スーパー(10回吸収)"
-                      value={newProdName}
-                      onChange={(e) => setNewProdName(e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold">容量</label>
-                    <input
-                      type="text"
-                      placeholder="例：30枚"
-                      value={newProdCapacity}
-                      onChange={(e) => setNewProdCapacity(e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold">サイズ</label>
-                    <input
-                      type="text"
-                      placeholder="例：M、L、S"
-                      value={newProdSize}
-                      onChange={(e) => setNewProdSize(e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold">仕入れ金額(税込価格) <span className="text-rose-500">*</span></label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="例：2273"
-                      value={newProdPriceInclTax}
-                      onChange={(e) => setNewProdPriceInclTax(e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold">初期の現在庫数 <span className="text-rose-500">*</span></label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="例：10"
-                      value={newProdCurrentStock}
-                      onChange={(e) => setNewProdCurrentStock(e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500 font-mono font-bold text-slate-800"
-                    />
-                  </div>
-
-                  {/* Calculations Preview widget */}
-                  <div className="bg-slate-50 p-2.5 rounded border border-slate-200 text-[11px] text-slate-500 leading-tight space-y-1">
-                    <p className="font-bold text-slate-700">【自動計算値プレビュー】</p>
-                    <p>仕入税抜価格: {newProdPriceInclTax ? `¥${Math.round(newProdPriceInclTax / 1.1).toLocaleString()}` : "未入力"}</p>
-                    <p className="text-blue-700 font-semibold">販売価格(税抜の2割増): {newProdPriceInclTax ? `¥${Math.round(Math.round(newProdPriceInclTax / 1.1) * 1.2).toLocaleString()}` : "未入力"}</p>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="sm:col-span-2 mt-2 w-full py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded transition cursor-pointer shadow-sm"
-                  >
-                    商品をマスタへ登録する
-                  </button>
-                </form>
-              </div>
-
-            </div>
-
-            {/* Current Product Master list view for admin check */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50 select-none">
-                <div>
-                  <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
-                    <ClipboardList className="h-4 w-4 text-blue-600" />
-                    登録済み衛生用品・おむつマスタ一覧 ({filteredProducts.length}件)
-                  </h3>
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    ※ヘルパー画面のプルダウンに自動連携されます
-                  </span>
-                </div>
-
-                {/* Search & Sort Controls for Product Master */}
-                <div className="flex flex-wrap gap-2.5 items-center">
-                  <div className="relative flex-1 min-w-[200px] sm:w-64">
-                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="商品名・メーカー・カテゴリ等で検索..."
-                      value={productSearchQuery}
-                      onChange={(e) => setProductSearchQuery(e.target.value)}
-                      className="w-full pl-8 pr-4 py-1.5 rounded-lg border border-slate-300 outline-none text-xs focus:ring-1 focus:ring-blue-500 bg-white"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs text-slate-700 shadow-xs">
-                    <ArrowUpDown className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-                    <span className="font-bold text-[11px] text-slate-500 shrink-0">並び順:</span>
-                    <select
-                      value={productSortBy}
-                      onChange={(e) => setProductSortBy(e.target.value)}
-                      className="bg-transparent font-semibold text-slate-800 outline-none cursor-pointer text-xs"
-                    >
-                      <option value="category">★ カテゴリー順（オムツ・パット等）</option>
-                      <option value="name">商品名順（50音）</option>
-                      <option value="maker">メーカー順</option>
-                      <option value="stock-asc">在庫が少ない順（要補充）</option>
-                      <option value="stock-desc">在庫が多い順</option>
-                      <option value="price-asc">販売単価が安い順</option>
-                      <option value="price-desc">販売単価が高い順</option>
-                      <option value="default">登録順</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold select-none">
-                      <th 
-                        className="p-3 cursor-pointer hover:bg-slate-200 transition"
-                        onClick={() => setProductSortBy("category")}
-                        title="クリックでカテゴリー順に並べ替え"
-                      >
-                        <div className="flex items-center gap-1">
-                          <span>カテゴリー</span>
-                          <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                        </div>
-                      </th>
-                      <th 
-                        className="p-3 cursor-pointer hover:bg-slate-200 transition"
-                        onClick={() => setProductSortBy("maker")}
-                        title="クリックでメーカー順に並べ替え"
-                      >
-                        <div className="flex items-center gap-1">
-                          <span>メーカー名</span>
-                          <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                        </div>
-                      </th>
-                      <th 
-                        className="p-3 cursor-pointer hover:bg-slate-200 transition"
-                        onClick={() => setProductSortBy("name")}
-                        title="クリックで商品名順に並べ替え"
-                      >
-                        <div className="flex items-center gap-1">
-                          <span>商品名（パッケージ名）</span>
-                          <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                        </div>
-                      </th>
-                      <th className="p-3 text-center">容量</th>
-                      <th className="p-3 text-center">サイズ</th>
-                      <th 
-                        className="p-3 text-center cursor-pointer hover:bg-slate-200 transition"
-                        onClick={() => setProductSortBy(prev => prev === "stock-asc" ? "stock-desc" : "stock-asc")}
-                        title="クリックで在庫数順に並べ替え"
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          <span>現在庫数</span>
-                          <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                        </div>
-                      </th>
-                      <th className="p-3 text-right">仕入税込単価</th>
-                      <th className="p-3 text-right">仕入税抜単価</th>
-                      <th 
-                        className="p-3 text-right text-blue-700 font-extrabold bg-blue-50/10 cursor-pointer hover:bg-blue-100/20 transition"
-                        onClick={() => setProductSortBy(prev => prev === "price-asc" ? "price-desc" : "price-asc")}
-                        title="クリックで販売単価順に並べ替え"
-                      >
-                        <div className="flex items-center justify-end gap-1">
-                          <span>販売単価(税抜2割増)</span>
-                          <ArrowUpDown className="h-3 w-3 text-blue-400" />
-                        </div>
-                      </th>
-                      <th className="p-3 text-center">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredProducts.map((prod) => (
-                      <tr key={prod.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-3 font-semibold text-slate-600">{prod.category}</td>
-                        <td className="p-3"><span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-medium">{prod.maker}</span></td>
-                        <td className="p-3 font-bold text-slate-900">{prod.name}</td>
-                        <td className="p-3 text-center font-mono">{prod.capacity}</td>
-                        <td className="p-3 text-center font-bold">{prod.size}</td>
-                        <td className="p-3 text-center whitespace-nowrap">
-                          {prod.currentStock !== undefined ? (
-                            prod.currentStock === 0 ? (
-                              <span className="inline-block px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-200 animate-pulse text-[10px]">
-                                🚨 0個 (要補充)
-                              </span>
-                            ) : prod.currentStock <= 2 ? (
-                              <span className="inline-block px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold border border-amber-300 text-[10px]">
-                                ⚠️ {prod.currentStock}個 (僅少)
-                              </span>
-                            ) : (
-                              <span className="inline-block px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold border border-emerald-200 text-[10px]">
-                                {prod.currentStock}個
-                              </span>
-                            )
-                          ) : (
-                            <span className="text-slate-400 font-mono">-</span>
-                          )}
-                        </td>
-                        <td className="p-3 text-right font-mono">¥{prod.priceInclTax.toLocaleString()}</td>
-                        <td className="p-3 text-right font-mono text-slate-500">¥{prod.priceExclTax.toLocaleString()}</td>
-                        <td className="p-3 text-right font-bold text-sm text-blue-700 font-mono bg-blue-50/10">¥{prod.sellingPrice.toLocaleString()}</td>
-                        <td className="p-3 text-center">
-                          <div className="flex items-center justify-center space-x-1">
-                            <button
-                              onClick={() => openEditModal(prod)}
-                              className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition cursor-pointer"
-                              title="編集・上書き"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteProduct(prod.id)}
-                              className="text-rose-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition cursor-pointer"
-                              title="削除"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {filteredProducts.length === 0 && (
-                  <div className="py-12 text-center text-slate-400">
-                    <p className="text-sm font-semibold">該当する商品が見つかりませんでした</p>
-                    {productSearchQuery && (
-                      <button
-                        onClick={() => setProductSearchQuery("")}
-                        className="mt-2 text-xs text-blue-600 underline font-semibold hover:text-blue-800 cursor-pointer"
-                      >
-                        検索条件をクリア
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
 
           </div>
         )}
@@ -4731,6 +5513,7 @@ export default function App() {
                     <option value="bcp">BCP非常災害用備蓄資材 ({stockpiles.length}品目)</option>
                     <option value="diaper">利用者販売用商品マスタ ({products.length}品目)</option>
                     <option value="all">★ 両方をまとめて総合出力 ({stockpiles.length + products.length}品目)</option>
+                    <option value="history">📋 出庫記録台帳（①利用者 ＆ ②施設・BCP統合） ({printableHistory.length}件)</option>
                   </select>
                 </div>
 
@@ -4879,6 +5662,45 @@ export default function App() {
                       </table>
                     </div>
                   )}
+
+                  {printTarget === "history" && (
+                    <div className="space-y-1 pt-2">
+                      <div className="font-bold text-xs text-amber-900">■ 出庫記録台帳 ({printableHistory.length}件)</div>
+                      <table className="w-full border-collapse text-[10px]">
+                        <thead>
+                          <tr className="bg-slate-100 border border-slate-300">
+                            <th className="p-1 border border-slate-300 text-center w-8">No</th>
+                            <th className="p-1 border border-slate-300">区分</th>
+                            <th className="p-1 border border-slate-300">出庫日時</th>
+                            <th className="p-1 border border-slate-300">宛名・出庫先</th>
+                            <th className="p-1 border border-slate-300">商品名・品目</th>
+                            <th className="p-1 border border-slate-300 text-center">数量</th>
+                            <th className="p-1 border border-slate-300">担当者</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {printableHistory.slice(0, 15).map((r, idx) => (
+                            <tr key={`${r.kind}-${r.id}`} className="border-b border-slate-200">
+                              <td className="p-1 border border-slate-200 text-center">{idx + 1}</td>
+                              <td className="p-1 border border-slate-200 font-bold">
+                                {r.kind === "user" ? "👤利用者" : "🏢施設"}
+                              </td>
+                              <td className="p-1 border border-slate-200 font-mono">{r.date}</td>
+                              <td className="p-1 border border-slate-200 font-bold">{r.targetName}</td>
+                              <td className="p-1 border border-slate-200">{r.itemName}</td>
+                              <td className="p-1 border border-slate-200 text-center font-bold">{r.quantity} {r.unit}</td>
+                              <td className="p-1 border border-slate-200">{r.staffName || "-"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {printableHistory.length > 15 && (
+                        <div className="text-[10px] text-slate-500 text-center py-1">
+                          ... 他 {printableHistory.length - 15} 件（印刷・PDF出力時は全件が完全に出力されます）
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -4926,14 +5748,16 @@ export default function App() {
           <h1 style={{ fontSize: "16pt", fontWeight: "900", color: "#0f172a", margin: "2px 0 4px 0" }}>
             {printTarget === "bcp" ? "【施設・非常災害用】BCP備蓄品・衛生消耗品 在庫管理一覧表"
               : printTarget === "diaper" ? "【利用者販売用】衛生商品・おむつ類 在庫管理一覧表"
+              : printTarget === "history" ? "【出庫記録】物品・備品・衛生用品 出庫履歴総合管理台帳"
               : "衛生用品＆備蓄資材 在庫管理総合一覧表"}
           </h1>
           <div style={{ fontSize: "8.5pt", color: "#475569" }}>
-            出力日時: {new Date().toLocaleString("ja-JP")} ｜ 発行管理者: 管理者 ｜ 対象品目数: {
-              printTarget === "bcp" ? printableStockpiles.length
-              : printTarget === "diaper" ? printableProducts.length
-              : printableStockpiles.length + printableProducts.length
-            }品目
+            出力日時: {new Date().toLocaleString("ja-JP")} ｜ 発行管理者: 管理者 ｜ 対象件数: {
+              printTarget === "bcp" ? `${printableStockpiles.length}品目`
+              : printTarget === "diaper" ? `${printableProducts.length}品目`
+              : printTarget === "history" ? `${printableHistory.length}件`
+              : `${printableStockpiles.length + printableProducts.length}品目`
+            }
           </div>
         </div>
 
@@ -5041,6 +5865,50 @@ export default function App() {
                   </tr>
                 );
               })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* History Records Table in Printable Layout */}
+      {printTarget === "history" && (
+        <div>
+          <div style={{ fontSize: "11pt", fontWeight: "bold", color: "#b45309", marginBottom: "4px" }}>
+            ■ 出庫記録台帳（スマホ出庫①利用者販売 ＆ スマホ出庫②施設・BCP出庫 統合管理）({printableHistory.length}件)
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: "30px", textAlign: "center" }}>No</th>
+                <th style={{ width: "85px", textAlign: "center" }}>出庫区分</th>
+                <th style={{ width: "110px", textAlign: "center" }}>出庫日時</th>
+                <th style={{ width: "130px" }}>出庫先・対象者</th>
+                <th>品目名・商品規格</th>
+                <th style={{ width: "70px", textAlign: "center" }}>出庫数量</th>
+                <th style={{ width: "95px" }}>出庫担当者</th>
+                <th style={{ width: "80px", textAlign: "center" }}>請求月</th>
+              </tr>
+            </thead>
+            <tbody>
+              {printableHistory.map((r, idx) => (
+                <tr key={`${r.kind}-${r.id}`}>
+                  <td style={{ textAlign: "center" }}>{idx + 1}</td>
+                  <td style={{ textAlign: "center", fontSize: "8pt", fontWeight: "bold", color: r.kind === "user" ? "#be185d" : "#047857" }}>
+                    {r.kind === "user" ? "👤 利用者販売" : "🏢 施設・BCP"}
+                  </td>
+                  <td style={{ textAlign: "center", fontSize: "8pt", fontFamily: "monospace" }}>{r.date}</td>
+                  <td style={{ fontWeight: "bold" }}>{r.targetName}</td>
+                  <td>
+                    <div style={{ fontWeight: "bold" }}>{r.itemName}</div>
+                    {r.category && <div style={{ fontSize: "7.5pt", color: "#64748b" }}>{r.category}</div>}
+                  </td>
+                  <td style={{ textAlign: "center", fontWeight: "bold", fontFamily: "monospace" }}>
+                    {r.quantity} {r.unit}
+                  </td>
+                  <td>{r.staffName || "-"}</td>
+                  <td style={{ textAlign: "center", fontSize: "8pt" }}>{r.billingMonth || "-"}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

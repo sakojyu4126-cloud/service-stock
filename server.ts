@@ -627,31 +627,44 @@ app.post("/api/reset", async (req, res) => {
 // Withdrawals API
 app.post("/api/withdrawals", async (req, res) => {
   try {
-    const { userName, staffName, productId, quantity, date } = req.body;
+    const { userName, staffName, productId, productName, quantity, date } = req.body;
     const db = await readDatabase();
-    const product = db.products.find((p: any) => p.id === productId);
+    if (!Array.isArray(db.products)) db.products = [];
+    if (!Array.isArray(db.withdrawals)) db.withdrawals = [];
+    if (!Array.isArray(db.stockpiles)) db.stockpiles = [];
+    if (!Array.isArray(db.users)) db.users = [];
+    if (!Array.isArray(db.staff)) db.staff = [];
+
+    let product = db.products.find((p: any) => p.id === productId);
+    if (!product && productName) {
+      const pNorm = normalizeName(productName);
+      product = db.products.find((p: any) => normalizeName(p.name) === pNorm || normalizeName(p.name).includes(pNorm));
+    }
+    if (!product && db.products.length > 0) {
+      product = db.products.find((p: any) => p.id === "p1") || db.products[0];
+    }
     if (!product) {
-      return res.status(404).json({ error: "Product not found" });
+      return res.status(404).json({ error: "商品が見つかりませんでした" });
     }
 
-    const cleanUserName = userName.endsWith("様") ? userName : `${userName} 様`;
+    const cleanUserName = userName ? (userName.endsWith("様") ? userName : `${userName} 様`) : "利用者 様";
     const withdrawDate = date || new Date().toISOString().replace("T", " ").substring(0, 16);
     const billingM = getBillingMonth(withdrawDate);
-    const qty = Number(quantity) || 1;
+    const qty = Math.max(1, Number(quantity) || 1);
 
     // Auto-reduce product catalog stock (diaper / hygiene product stock)
-    if (product.currentStock !== undefined) {
+    if (typeof product.currentStock === "number") {
       product.currentStock = Math.max(0, product.currentStock - qty);
     } else {
       product.currentStock = 0;
     }
 
     const newWithdrawal = {
-      id: "w_" + Math.random().toString(36).substring(2, 11),
+      id: "w_" + Date.now().toString(36) + "_" + Math.random().toString(36).substring(2, 7),
       date: withdrawDate,
       userName: cleanUserName,
-      staffName,
-      productId,
+      staffName: staffName || "担当ヘルパー",
+      productId: product.id,
       product: { ...product }, // copy containing updated stock
       quantity: qty,
       billingMonth: billingM,
@@ -669,27 +682,10 @@ app.post("/api/withdrawals", async (req, res) => {
       db.staff.push(staffName);
     }
 
-    // Attempt to automatically reduce matching item in Stockpile if applicable
-    // e.g. if category is "PVC介護手袋" or names overlap, or toilet paper is withdrawn
-    // Let's check matching by name or tags
-    const matchingStockpile = db.stockpiles.find((s: any) => 
-      s.name.toLowerCase().includes(product.category.toLowerCase()) ||
-      product.name.toLowerCase().includes(s.name.toLowerCase()) ||
-      s.name.toLowerCase().includes(product.name.toLowerCase())
-    );
-    if (matchingStockpile) {
-      // Reduce the stockpile by quantity (min 0)
-      matchingStockpile.currentStock = Math.max(0, matchingStockpile.currentStock - (Number(quantity) || 1));
-      // Reset alertDismissed when stock drops below threshold again
-      if (matchingStockpile.currentStock <= 1) {
-        matchingStockpile.alertDismissed = false;
-      }
-    }
-
     await writeDatabase(db);
-    res.json({ message: "Withdrawal recorded", withdrawal: newWithdrawal, data: db });
+    res.json({ message: "出庫を登録しました", withdrawal: newWithdrawal, data: db });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || "出庫登録に失敗しました" });
   }
 });
 
@@ -716,25 +712,53 @@ app.delete("/api/withdrawals/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const db = await readDatabase();
+    if (!Array.isArray(db.withdrawals)) db.withdrawals = [];
+    if (!Array.isArray(db.products)) db.products = [];
     
     // Restore product stock when a withdrawal is deleted
     const withdrawal = db.withdrawals.find((w: any) => w.id === id);
     if (withdrawal) {
       const prod = db.products.find((p: any) => p.id === withdrawal.productId);
       if (prod) {
-        if (prod.currentStock !== undefined) {
-          prod.currentStock += (withdrawal.quantity || 1);
-        } else {
-          prod.currentStock = withdrawal.quantity || 1;
-        }
+        prod.currentStock = (Number(prod.currentStock) || 0) + (Number(withdrawal.quantity) || 1);
       }
     }
 
     db.withdrawals = db.withdrawals.filter((w: any) => w.id !== id);
     await writeDatabase(db);
-    res.json({ message: "Withdrawal deleted", data: db });
+    res.json({ message: "出庫履歴を削除しました", data: db });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || "出庫履歴の削除に失敗しました" });
+  }
+});
+
+app.post("/api/withdrawals/delete-multiple", async (req, res) => {
+  try {
+    const { ids, restoreStock } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "削除するIDを指定してください" });
+    }
+    const db = await readDatabase();
+    if (!Array.isArray(db.withdrawals)) db.withdrawals = [];
+    if (!Array.isArray(db.products)) db.products = [];
+
+    const idSet = new Set(ids);
+    if (restoreStock) {
+      for (const w of db.withdrawals) {
+        if (idSet.has(w.id)) {
+          const prod = db.products.find((p: any) => p.id === w.productId);
+          if (prod) {
+            prod.currentStock = (Number(prod.currentStock) || 0) + (Number(w.quantity) || 1);
+          }
+        }
+      }
+    }
+
+    db.withdrawals = db.withdrawals.filter((w: any) => !idSet.has(w.id));
+    await writeDatabase(db);
+    res.json({ message: "選択した出庫履歴を削除しました", data: db });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "出庫履歴の削除に失敗しました" });
   }
 });
 
@@ -1070,11 +1094,15 @@ app.get("/api/staff-withdrawals", async (req, res) => {
 app.post("/api/staff-withdrawals", async (req, res) => {
   try {
     const { office, category, itemName, quantity, staffName, date } = req.body;
-    if (!office || !category || !itemName || !staffName) {
-      return res.status(400).json({ error: "Office, category, itemName, and staffName are required." });
+    if (!office || !itemName || !staffName) {
+      return res.status(400).json({ error: "出庫先事業所、品目、出庫担当者名を入力してください。" });
     }
     const db = await readDatabase();
-    const qty = Number(quantity) || 1;
+    if (!Array.isArray(db.stockpiles)) db.stockpiles = [];
+    if (!Array.isArray(db.staffWithdrawals)) db.staffWithdrawals = [];
+    if (!Array.isArray(db.staff)) db.staff = [];
+
+    const qty = Math.max(1, Number(quantity) || 1);
 
     // Normalize input itemName to match stockpile items fuzzy
     const normInput = normalizeName(itemName);
@@ -1088,29 +1116,50 @@ app.post("/api/staff-withdrawals", async (req, res) => {
       });
     }
 
+    if (!matchingStockpile) {
+      // Fallback 2: token search
+      const tokens = normInput.split(/[^a-z0-9\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]+/).filter(Boolean);
+      if (tokens.length > 0) {
+        matchingStockpile = db.stockpiles.find((s: any) => {
+          const sNorm = normalizeName(s.name);
+          return tokens.some((t: string) => sNorm.includes(t));
+        });
+      }
+    }
+
     if (matchingStockpile) {
-      matchingStockpile.currentStock = Math.max(0, matchingStockpile.currentStock - qty);
+      matchingStockpile.currentStock = Math.max(0, (Number(matchingStockpile.currentStock) || 0) - qty);
       if (matchingStockpile.currentStock <= 1) {
         matchingStockpile.alertDismissed = false;
       }
     } else {
-      console.warn(`[Staff Withdrawal Warning] No stockpile matches name: ${itemName} (${normInput})`);
+      // If item is completely new, add it to stockpiles with 0 stock
+      const newStockpile = {
+        id: "s_" + Date.now().toString(36),
+        name: itemName,
+        category: category || "①衛生用品-1（日常業務用）",
+        currentStock: 0,
+        requiredStock: 5,
+        unit: "個",
+        location: "5番館倉庫",
+        manager: staffName || "事務員",
+        notes: "スマホ出庫②より自動登録",
+        alertDismissed: false
+      };
+      db.stockpiles.push(newStockpile);
     }
 
     const withdrawDate = date || new Date().toISOString().replace("T", " ").substring(0, 16);
     const newStaffWithdrawal = {
-      id: "sw_" + Math.random().toString(36).substring(2, 11),
+      id: "sw_" + Date.now().toString(36) + "_" + Math.random().toString(36).substring(2, 7),
       date: withdrawDate,
       office,
-      category,
+      category: category || "①衛生用品-1（日常業務用）",
       itemName,
       quantity: qty,
       staffName
     };
 
-    if (!db.staffWithdrawals) {
-      db.staffWithdrawals = [];
-    }
     db.staffWithdrawals.unshift(newStaffWithdrawal);
 
     // Auto-save staff to staff list if new
@@ -1120,10 +1169,86 @@ app.post("/api/staff-withdrawals", async (req, res) => {
 
     await writeDatabase(db);
     res.json({
-      message: "Staff withdrawal registered",
+      message: "出庫を登録しました",
       staffWithdrawal: newStaffWithdrawal,
       data: db
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "出庫登録に失敗しました" });
+  }
+});
+
+app.delete("/api/staff-withdrawals/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = await readDatabase();
+    if (!Array.isArray(db.staffWithdrawals)) db.staffWithdrawals = [];
+    if (!Array.isArray(db.stockpiles)) db.stockpiles = [];
+
+    const idx = db.staffWithdrawals.findIndex((sw: any) => sw.id === id);
+    if (idx !== -1) {
+      const sw = db.staffWithdrawals[idx];
+      // Restore stockpile stock
+      const normInput = normalizeName(sw.itemName);
+      let target = db.stockpiles.find((s: any) => normalizeName(s.name) === normInput) ||
+        db.stockpiles.find((s: any) => {
+          const sNorm = normalizeName(s.name);
+          return sNorm.includes(normInput) || normInput.includes(sNorm);
+        });
+      if (target) {
+        target.currentStock = (Number(target.currentStock) || 0) + (Number(sw.quantity) || 1);
+      }
+      db.staffWithdrawals.splice(idx, 1);
+      await writeDatabase(db);
+      return res.json({ message: "出庫履歴を削除しました", data: db });
+    }
+    res.status(404).json({ error: "出庫履歴が見つかりませんでした" });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "削除に失敗しました" });
+  }
+});
+
+app.post("/api/staff-withdrawals/delete-multiple", async (req, res) => {
+  try {
+    const { ids, restoreStock } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "削除するIDを指定してください" });
+    }
+    const db = await readDatabase();
+    if (!Array.isArray(db.staffWithdrawals)) db.staffWithdrawals = [];
+    if (!Array.isArray(db.stockpiles)) db.stockpiles = [];
+
+    const idSet = new Set(ids);
+    if (restoreStock) {
+      for (const sw of db.staffWithdrawals) {
+        if (idSet.has(sw.id)) {
+          const normInput = normalizeName(sw.itemName);
+          let target = db.stockpiles.find((s: any) => normalizeName(s.name) === normInput) ||
+            db.stockpiles.find((s: any) => {
+              const sNorm = normalizeName(s.name);
+              return sNorm.includes(normInput) || normInput.includes(sNorm);
+            });
+          if (target) {
+            target.currentStock = (Number(target.currentStock) || 0) + (Number(sw.quantity) || 1);
+          }
+        }
+      }
+    }
+
+    db.staffWithdrawals = db.staffWithdrawals.filter((sw: any) => !idSet.has(sw.id));
+    await writeDatabase(db);
+    res.json({ message: "選択した出庫履歴を削除しました", data: db });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "削除に失敗しました" });
+  }
+});
+
+app.post("/api/staff-withdrawals/clear", async (req, res) => {
+  try {
+    const db = await readDatabase();
+    db.staffWithdrawals = [];
+    await writeDatabase(db);
+    res.json({ message: "全ての職員出庫履歴を消去しました", data: db });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

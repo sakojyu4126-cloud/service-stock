@@ -10,7 +10,7 @@
       "priceInclTax": 2273,
       "priceExclTax": 2066,
       "sellingPrice": 2480,
-      "currentStock": 12
+      "currentStock": 8
     },
     {
       "id": "p2",
@@ -186,7 +186,7 @@
       "id": "s2",
       "name": "PVC使い捨て手袋M",
       "category": "①衛生用品-1（日常業務用）",
-      "currentStock": 40,
+      "currentStock": 38,
       "requiredStock": 40,
       "unit": "箱",
       "location": "5番館倉庫",
@@ -651,21 +651,115 @@
       "alertDismissed": false
     }
   ],
-  "withdrawals": [],
+  "withdrawals": [
+    {
+      "id": "w_muxsgmi8_d4dda",
+      "date": "2026-10-07 07:31",
+      "userName": "佐藤 花子 様",
+      "staffName": "田中",
+      "productId": "p1",
+      "product": {
+        "id": "p1",
+        "maker": "リフレ",
+        "category": "尿取りパット類",
+        "name": "スピードキャッチパッド スーパー(10回吸収)",
+        "capacity": "30枚",
+        "size": "-",
+        "priceInclTax": 2273,
+        "priceExclTax": 2066,
+        "sellingPrice": 2480,
+        "currentStock": 8
+      },
+      "quantity": 2,
+      "billingMonth": "10月",
+      "status": "unbilled",
+      "billedDate": null
+    },
+    {
+      "id": "w_xclym2cv7",
+      "date": "2026-10-07 07:05",
+      "userName": "テスト利用者 様",
+      "staffName": "テスト職員",
+      "productId": "p1",
+      "product": {
+        "id": "p1",
+        "maker": "リフレ",
+        "category": "尿取りパット類",
+        "name": "スピードキャッチパッド スーパー(10回吸収)",
+        "capacity": "30枚",
+        "size": "-",
+        "priceInclTax": 2273,
+        "priceExclTax": 2066,
+        "sellingPrice": 2480,
+        "currentStock": 10
+      },
+      "quantity": 1,
+      "billingMonth": "10月",
+      "status": "unbilled",
+      "billedDate": null
+    },
+    {
+      "id": "w_rcuc3owch",
+      "date": "2026-10-07 02:37",
+      "userName": "テスト様",
+      "staffName": "山田",
+      "productId": "p1",
+      "product": {
+        "id": "p1",
+        "maker": "リフレ",
+        "category": "尿取りパット類",
+        "name": "スピードキャッチパッド スーパー(10回吸収)",
+        "capacity": "30枚",
+        "size": "-",
+        "priceInclTax": 2273,
+        "priceExclTax": 2066,
+        "sellingPrice": 2480,
+        "currentStock": 11
+      },
+      "quantity": 1,
+      "billingMonth": "10月",
+      "status": "unbilled",
+      "billedDate": null
+    }
+  ],
   "users": [
     "中島義昭 様",
     "中島富美子 様",
     "大西 様",
-    "森 様"
+    "森 様",
+    "テスト様",
+    "テスト利用者 様",
+    "佐藤 花子 様"
   ],
   "staff": [
     "山田",
     "佐藤",
     "高橋",
     "渡辺",
-    "鈴木"
+    "鈴木",
+    "テスト職員",
+    "田中"
   ],
-  "staffWithdrawals": [],
+  "staffWithdrawals": [
+    {
+      "id": "sw_u9wr2lauj",
+      "date": "2026-10-07 07:06",
+      "office": "サ高住",
+      "category": "①衛生用品-1（日常業務用）",
+      "itemName": "PVC使い捨て手袋M",
+      "quantity": 1,
+      "staffName": "山田"
+    },
+    {
+      "id": "sw_mxs18y1oh",
+      "date": "2026-10-07 07:04",
+      "office": "サ高住",
+      "category": "①衛生用品-1（日常業務用）",
+      "itemName": "PVC使い捨て手袋M",
+      "quantity": 1,
+      "staffName": "山田"
+    }
+  ],
   "deletedProducts": [],
   "deletedProductIds": [],
   "deletedStockpiles": [],

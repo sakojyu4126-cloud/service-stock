@@ -37,4 +37,14 @@ export interface Stockpile {
   alertDismissed: boolean;
 }
 
-export type ActiveTab = 'helper' | 'helper2' | 'billing' | 'stockpile';
+export interface StaffWithdrawal {
+  id: string;
+  date: string;
+  office: string; // サ高住, ヘルパーステーション, デイサービス
+  category: string;
+  itemName: string;
+  quantity: number;
+  staffName: string;
+}
+
+export type ActiveTab = 'helper' | 'helper2' | 'billing' | 'stockpile' | 'history';
