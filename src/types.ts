@@ -22,6 +22,8 @@ export interface Withdrawal {
   billingMonth: string;
   status: 'unbilled' | 'billed';
   billedDate: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Stockpile {
@@ -35,6 +37,7 @@ export interface Stockpile {
   manager: string;
   notes: string;
   alertDismissed: boolean;
+  updatedAt?: string;
 }
 
 export interface StaffWithdrawal {
@@ -45,6 +48,8 @@ export interface StaffWithdrawal {
   itemName: string;
   quantity: number;
   staffName: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type ActiveTab = 'helper' | 'helper2' | 'billing' | 'stockpile' | 'history';

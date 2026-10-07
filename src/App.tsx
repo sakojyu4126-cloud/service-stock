@@ -36,6 +36,25 @@ import {
   Calendar
 } from "lucide-react";
 import { Product, Withdrawal, Stockpile, StaffWithdrawal, ActiveTab } from "./types";
+import {
+  testConnection,
+  subscribeToAllData,
+  initializeFirestoreIfEmpty,
+  registerWithdrawalToFirestore,
+  registerStaffWithdrawalToFirestore,
+  deleteWithdrawalFromFirestore,
+  deleteStaffWithdrawalFromFirestore,
+  deleteMultipleWithdrawalsFromFirestore,
+  clearAllStaffWithdrawalsFromFirestore,
+  updateWithdrawalStatusInFirestore,
+  saveProductToFirestore,
+  deleteProductFromFirestore,
+  saveStockpileToFirestore,
+  deleteStockpileFromFirestore,
+  deleteUserFromFirestore,
+  deleteStaffFromFirestore,
+  restoreAllDataToFirestore
+} from "./firebase";
 
 // Helper to determine billing month based on 15th cutoff
 function getBillingMonth(dateStr: string): string {
@@ -117,6 +136,9 @@ const DEFAULT_STOCKPILES: Stockpile[] = [
   { id: "s39", name: "ハンドペーパー", category: "④デイサービス", currentStock: 250, requiredStock: 250, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "ペーパータオル", alertDismissed: false },
   { id: "s40", name: "お風呂洗剤（4L）", category: "④デイサービス", currentStock: 3, requiredStock: 3, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "お風呂清掃用", alertDismissed: false }
 ];
+
+const DEFAULT_USERS = ["中島義昭 様", "中島富美子 様", "大西 様", "森 様"];
+const DEFAULT_STAFF = ["山田", "佐藤", "高橋", "渡辺", "鈴木"];
 
 export default function App() {
   // Database States - initialized with offline cached copy or fallback to ensure 0-item display bug never occurs
@@ -408,33 +430,69 @@ export default function App() {
     }
   };
 
-  // Poll database every 15 seconds ONLY when tab is visible to prevent 50,000 req/day quota exhaust
+  // Real-time multi-device sync via Firebase Cloud Firestore
   useEffect(() => {
-    fetchData();
+    // 1. Connection check
+    testConnection();
 
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        fetchData(true);
+    // 2. Initialize master data in Firestore if empty
+    initializeFirestoreIfEmpty({
+      products: DEFAULT_PRODUCTS,
+      stockpiles: DEFAULT_STOCKPILES,
+      withdrawals: [],
+      users: DEFAULT_USERS,
+      staff: DEFAULT_STAFF
+    });
+
+    // 3. Real-time multi-device synchronization via Firestore onSnapshot
+    // Instant updates across smartphones, tablets, and PCs without polling or AI calls
+    const unsubscribe = subscribeToAllData({
+      onProducts: (newProducts) => {
+        if (Array.isArray(newProducts) && newProducts.length > 0) {
+          setProducts(newProducts);
+          saveLocalCache({ products: newProducts });
+        }
+      },
+      onStockpiles: (newStockpiles) => {
+        if (Array.isArray(newStockpiles) && newStockpiles.length > 0) {
+          const enriched = newStockpiles.map((s: Stockpile) => {
+            if (!s.category) {
+              const def = DEFAULT_STOCKPILES.find(d => d.id === s.id || normalizeName(d.name) === normalizeName(s.name));
+              return { ...s, category: def?.category || "①衛生用品-1（日常業務用）" };
+            }
+            return s;
+          });
+          setStockpiles(enriched);
+          saveLocalCache({ stockpiles: enriched });
+        }
+      },
+      onWithdrawals: (newWithdrawals) => {
+        setWithdrawals(newWithdrawals);
+        saveLocalCache({ withdrawals: newWithdrawals });
+      },
+      onStaffWithdrawals: (newStaffWithdrawals) => {
+        setStaffWithdrawals(newStaffWithdrawals);
+        saveLocalCache({ staffWithdrawals: newStaffWithdrawals });
+      },
+      onUsers: (newUsers) => {
+        if (Array.isArray(newUsers) && newUsers.length > 0) {
+          setUsers(newUsers);
+          saveLocalCache({ users: newUsers });
+        }
+      },
+      onStaff: (newStaff) => {
+        if (Array.isArray(newStaff) && newStaff.length > 0) {
+          setStaff(newStaff);
+          saveLocalCache({ staff: newStaff });
+        }
       }
-    }, 15000);
+    });
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        fetchData(true);
-      }
-    };
-
-    const handleFocus = () => {
-      fetchData(true);
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("focus", handleFocus);
+    // 4. Initial server fetch as fallback
+    fetchData(true);
 
     return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("focus", handleFocus);
+      unsubscribe();
     };
   }, []);
 
@@ -525,6 +583,9 @@ export default function App() {
       } catch (serverErr) {
         console.warn("Server backup save notice:", serverErr);
       }
+
+      // Real-time Cloud Firestore snapshot save
+      restoreAllDataToFirestore(currentSnapshot).catch(e => console.warn("Firestore snapshot save notice:", e));
 
       // 2. Also save to localStorage snapshot (double protection for immediate restore even offline)
       try {
@@ -693,6 +754,9 @@ export default function App() {
             staff: restoredData.staff
           });
 
+          // Real-time Cloud Firestore sync
+          restoreAllDataToFirestore(restoredData).catch(e => console.warn("Firestore snapshot restore notice:", e));
+
           await fetchBackupStatus();
 
           setBackupFeedbackMsg({
@@ -729,6 +793,10 @@ export default function App() {
             setBackupFeedbackMsg(null);
             try {
               let restoredDb = parsed.data || parsed;
+
+              // Real-time Cloud Firestore sync
+              restoreAllDataToFirestore(restoredDb).catch(e => console.warn("Firestore file restore notice:", e));
+
               const res = await fetch("/api/backup/restore", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -784,6 +852,9 @@ export default function App() {
         setBackupActionLoading(true);
         setBackupFeedbackMsg(null);
         try {
+          // Real-time Cloud Firestore sync
+          restoreAllDataToFirestore({ products: DEFAULT_PRODUCTS, stockpiles: DEFAULT_STOCKPILES }).catch(e => console.warn("Firestore master restore notice:", e));
+
           const res = await fetch("/api/backup/restore-master", { method: "POST" });
           if (!res.ok) throw new Error("マスター復元に失敗しました");
           const result = await res.json();
@@ -803,6 +874,7 @@ export default function App() {
           setProducts(DEFAULT_PRODUCTS);
           setStockpiles(DEFAULT_STOCKPILES);
           saveLocalCache({ products: DEFAULT_PRODUCTS, stockpiles: DEFAULT_STOCKPILES });
+          restoreAllDataToFirestore({ products: DEFAULT_PRODUCTS, stockpiles: DEFAULT_STOCKPILES }).catch(e => console.warn("Firestore master restore notice:", e));
           await fetch("/api/backup/restore", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -926,6 +998,8 @@ export default function App() {
       return next;
     });
 
+    deleteUserFromFirestore(nameToDelete).catch(e => console.warn("Firestore user delete notice:", e));
+
     try {
       const res = await fetch("/api/users/delete", {
         method: "POST",
@@ -934,10 +1008,10 @@ export default function App() {
       });
       if (res.ok) {
         const result = await res.json();
-        setUsers(result.data.users);
+        if (result?.data?.users) setUsers(result.data.users);
       }
     } catch (err) {
-      console.error("Failed to delete user on server", err);
+      console.warn("Server user delete notice:", err);
     }
   };
 
@@ -949,6 +1023,8 @@ export default function App() {
       return next;
     });
 
+    deleteStaffFromFirestore(nameToDelete).catch(e => console.warn("Firestore staff delete notice:", e));
+
     try {
       const res = await fetch("/api/staff/delete", {
         method: "POST",
@@ -957,10 +1033,10 @@ export default function App() {
       });
       if (res.ok) {
         const result = await res.json();
-        setStaff(result.data.staff);
+        if (result?.data?.staff) setStaff(result.data.staff);
       }
     } catch (err) {
-      console.error("Failed to delete staff on server", err);
+      console.warn("Server staff delete notice:", err);
     }
   };
 
@@ -1058,6 +1134,9 @@ export default function App() {
     const targetId = editingStockpile.id;
     setEditingStockpile(null);
 
+    // Real-time Cloud Firestore sync
+    saveStockpileToFirestore(updatedStock).catch(e => console.warn("Firestore stockpile update notice:", e));
+
     // 2. Background Server Sync
     try {
       const res = await fetch(`/api/stockpiles/${encodeURIComponent(targetId)}`, {
@@ -1136,6 +1215,16 @@ export default function App() {
     saveLocalCache({ products: newProducts, stockpiles: newStockpiles });
     const targetId = editingProduct.id;
     setEditingProduct(null);
+
+    // Real-time Cloud Firestore sync
+    saveProductToFirestore(updatedProd).catch(e => console.warn("Firestore product update notice:", e));
+    if (syncWithBcp) {
+      const sNameTarget = updatedProd.name.toLowerCase();
+      const match = stockpiles.find(s => s.name.toLowerCase().includes(sNameTarget) || sNameTarget.includes(s.name.toLowerCase()));
+      if (match) {
+        saveStockpileToFirestore({ ...match, currentStock: stockNum, alertDismissed: false }).catch(e => console.warn("Firestore sync stockpile:", e));
+      }
+    }
 
     try {
       const res = await fetch(`/api/products/${encodeURIComponent(targetId)}`, {
@@ -1274,7 +1363,15 @@ export default function App() {
       setWithdrawalSuccess(null);
     }, 4500);
 
-    // 2. Background sync to server API
+    // 2. Real-time Cloud Firestore sync (pushes immediately to PC & all devices)
+    registerWithdrawalToFirestore(
+      newWithdrawal,
+      { ...matchedProd, currentStock: nextStock },
+      !users.includes(finalUser) ? finalUser : undefined,
+      !staff.includes(finalStaff) ? finalStaff : undefined
+    ).catch(e => console.warn("Firestore withdrawal sync notice:", e));
+
+    // 3. Background sync to server API (fallback/backup)
     try {
       const res = await fetch("/api/withdrawals", {
         method: "POST",
@@ -1382,6 +1479,15 @@ export default function App() {
       setHelper2WithdrawalSuccess(null);
     }, 4500);
 
+    // Real-time Cloud Firestore sync (pushes immediately to PC & all devices)
+    if (targetStockpile) {
+      registerStaffWithdrawalToFirestore(
+        newStaffWithdrawal,
+        { ...targetStockpile, currentStock: nextStock },
+        !staff.includes(finalStaff) ? finalStaff : undefined
+      ).catch(e => console.warn("Firestore staff withdrawal sync notice:", e));
+    }
+
     // Background sync to server API
     try {
       const res = await fetch("/api/staff-withdrawals", {
@@ -1418,6 +1524,12 @@ export default function App() {
     const nextStatus = currentStatus === "unbilled" ? "billed" : "unbilled";
     const todayStr = nextStatus === "billed" ? new Date().toISOString().substring(0, 10) : null;
     
+    // Optimistic local update
+    setWithdrawals(prev => prev.map(w => w.id === id ? { ...w, status: nextStatus, billedDate: todayStr } : w));
+    
+    // Firestore sync
+    updateWithdrawalStatusInFirestore(id, nextStatus, todayStr).catch(e => console.warn("Firestore status notice:", e));
+
     try {
       const res = await fetch(`/api/withdrawals/${id}`, {
         method: "PUT",
@@ -1426,9 +1538,9 @@ export default function App() {
       });
       if (!res.ok) throw new Error("ステータスの変更に失敗しました");
       const result = await res.json();
-      setWithdrawals(result.data.withdrawals);
+      if (result?.data?.withdrawals) setWithdrawals(result.data.withdrawals);
     } catch (err: any) {
-      alert(err.message);
+      console.warn("Server toggle billing notice:", err);
     }
   };
 
@@ -1439,6 +1551,7 @@ export default function App() {
     try {
       const todayStr = new Date().toISOString().substring(0, 10);
       for (let id of selectedWithdrawals) {
+        updateWithdrawalStatusInFirestore(id, "billed", todayStr).catch(e => console.warn("Firestore bulk notice:", e));
         await fetch(`/api/withdrawals/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -1464,11 +1577,14 @@ export default function App() {
       async () => {
         // Optimistic local delete and restore product stock
         let updatedProducts = products;
+        let prodWithRestoredStock: Product | undefined;
         if (target) {
           const qty = Number(target.quantity) || 1;
           updatedProducts = products.map(p => {
             if (p.id === target.productId || (target.product && p.id === target.product.id)) {
-              return { ...p, currentStock: (Number(p.currentStock) || 0) + qty };
+              const restored = { ...p, currentStock: (Number(p.currentStock) || 0) + qty };
+              prodWithRestoredStock = restored;
+              return restored;
             }
             return p;
           });
@@ -1478,6 +1594,9 @@ export default function App() {
         const remaining = withdrawals.filter(w => w.id !== id);
         setWithdrawals(remaining);
         saveLocalCache({ products: updatedProducts, withdrawals: remaining });
+
+        // Real-time Cloud Firestore sync
+        deleteWithdrawalFromFirestore(id, prodWithRestoredStock).catch(e => console.warn("Firestore delete withdrawal notice:", e));
 
         try {
           const res = await fetch(`/api/withdrawals/${id}`, { method: "DELETE" });
@@ -1507,13 +1626,16 @@ export default function App() {
       async () => {
         // Optimistic local delete and restore stockpile stock
         let updatedStockpiles = stockpiles;
+        let stockWithRestoredStock: Stockpile | undefined;
         if (target) {
           const normInput = normalizeName(target.itemName);
           const qty = Number(target.quantity) || 1;
           updatedStockpiles = stockpiles.map(s => {
             const sNorm = normalizeName(s.name);
             if (sNorm === normInput || sNorm.includes(normInput) || normInput.includes(sNorm)) {
-              return { ...s, currentStock: (Number(s.currentStock) || 0) + qty };
+              const restored = { ...s, currentStock: (Number(s.currentStock) || 0) + qty };
+              stockWithRestoredStock = restored;
+              return restored;
             }
             return s;
           });
@@ -1523,6 +1645,9 @@ export default function App() {
         const remaining = staffWithdrawals.filter(sw => sw.id !== id);
         setStaffWithdrawals(remaining);
         saveLocalCache({ stockpiles: updatedStockpiles, staffWithdrawals: remaining });
+
+        // Real-time Cloud Firestore sync
+        deleteStaffWithdrawalFromFirestore(id, stockWithRestoredStock).catch(e => console.warn("Firestore delete staff withdrawal notice:", e));
 
         try {
           const res = await fetch(`/api/staff-withdrawals/${id}`, { method: "DELETE" });
@@ -1548,8 +1673,13 @@ export default function App() {
       "職員・BCP出庫履歴の全削除",
       "登録されている全ての職員・BCP出庫履歴を削除しますか？（※倉庫の現在の在庫数はそのまま維持されます）\n何ヶ月分も溜まった古い履歴を整理する際に実行してください。",
       async () => {
+        const allIds = staffWithdrawals.map(sw => sw.id);
         setStaffWithdrawals([]);
         saveLocalCache({ staffWithdrawals: [] });
+
+        // Real-time Cloud Firestore sync
+        clearAllStaffWithdrawalsFromFirestore(allIds).catch(e => console.warn("Firestore clear staff withdrawals notice:", e));
+
         try {
           const res = await fetch("/api/staff-withdrawals/clear", { method: "POST" });
           if (res.ok) {
@@ -1574,6 +1704,9 @@ export default function App() {
       async () => {
         setIsLoading(true);
         try {
+          const ids = withdrawals.map(w => w.id);
+          deleteMultipleWithdrawalsFromFirestore(ids).catch(e => console.warn("Firestore clear withdrawals notice:", e));
+
           const res = await fetch("/api/withdrawals/clear", { method: "POST" });
           if (!res.ok) throw new Error("履歴の削除に失敗しました");
           const result = await res.json();
@@ -1597,6 +1730,11 @@ export default function App() {
     const updated = stockpiles.map(s => s.id === id ? { ...s, currentStock: newVal, alertDismissed: newVal > 1 ? false : s.alertDismissed } : s);
     setStockpiles(updated);
     saveLocalCache({ stockpiles: updated });
+
+    const targetStock = updated.find(s => s.id === id);
+    if (targetStock) {
+      saveStockpileToFirestore(targetStock).catch(e => console.warn("Firestore stock adjust notice:", e));
+    }
 
     try {
       const res = await fetch(`/api/stockpiles/${id}`, {
@@ -1623,6 +1761,11 @@ export default function App() {
     const updated = stockpiles.map(s => s.id === id ? { ...s, currentStock: val, alertDismissed: val > 1 ? false : s.alertDismissed } : s);
     setStockpiles(updated);
     saveLocalCache({ stockpiles: updated });
+
+    const targetStock = updated.find(s => s.id === id);
+    if (targetStock) {
+      saveStockpileToFirestore(targetStock).catch(e => console.warn("Firestore stock set notice:", e));
+    }
 
     // 2. Debounced background sync
     if (stockSetTimeoutRef.current[id]) {
@@ -1654,6 +1797,11 @@ export default function App() {
     setStockpiles(updated);
     saveLocalCache({ stockpiles: updated });
 
+    const targetStock = updated.find(s => s.id === id);
+    if (targetStock) {
+      saveStockpileToFirestore(targetStock).catch(e => console.warn("Firestore dismiss alert notice:", e));
+    }
+
     try {
       const res = await fetch(`/api/stockpiles/${id}`, {
         method: "PUT",
@@ -1680,6 +1828,11 @@ export default function App() {
     setProducts(updated);
     saveLocalCache({ products: updated });
 
+    const targetProd = updated.find(p => p.id === id);
+    if (targetProd) {
+      saveProductToFirestore(targetProd).catch(e => console.warn("Firestore prod adjust notice:", e));
+    }
+
     try {
       const res = await fetch(`/api/products/${id}`, {
         method: "PUT",
@@ -1705,6 +1858,11 @@ export default function App() {
     const updated = products.map(p => p.id === id ? { ...p, currentStock: nextStock } : p);
     setProducts(updated);
     saveLocalCache({ products: updated });
+
+    const targetProd = updated.find(p => p.id === id);
+    if (targetProd) {
+      saveProductToFirestore(targetProd).catch(e => console.warn("Firestore prod set notice:", e));
+    }
 
     // 2. Debounced background sync
     if (prodStockSetTimeoutRef.current[id]) {
@@ -1763,6 +1921,9 @@ export default function App() {
       setProducts(nextProducts);
       saveLocalCache({ products: nextProducts });
 
+      // Real-time Cloud Firestore sync
+      saveProductToFirestore(optimisticProd).catch(e => console.warn("Firestore product add notice:", e));
+
       // Reset form
       setNewProdMaker("");
       setNewProdName("");
@@ -1815,6 +1976,9 @@ export default function App() {
         setProducts(remaining);
         saveLocalCache({ products: remaining });
 
+        // Real-time Cloud Firestore sync
+        deleteProductFromFirestore(id).catch(e => console.warn("Firestore product delete notice:", e));
+
         try {
           const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
           if (res.ok) {
@@ -1864,6 +2028,9 @@ export default function App() {
       const nextStockpiles = [...stockpiles, optimisticStock];
       setStockpiles(nextStockpiles);
       saveLocalCache({ stockpiles: nextStockpiles });
+
+      // Real-time Cloud Firestore sync
+      saveStockpileToFirestore(optimisticStock).catch(e => console.warn("Firestore stockpile add notice:", e));
 
       // Reset form
       setNewStockName("");
@@ -1915,6 +2082,9 @@ export default function App() {
         const remaining = stockpiles.filter(s => s.id !== id);
         setStockpiles(remaining);
         saveLocalCache({ stockpiles: remaining });
+
+        // Real-time Cloud Firestore sync
+        deleteStockpileFromFirestore(id).catch(e => console.warn("Firestore stockpile delete notice:", e));
 
         try {
           const res = await fetch(`/api/stockpiles/${encodeURIComponent(id)}`, { method: "DELETE" });

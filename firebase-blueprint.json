@@ -1,0 +1,137 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "利用者販売用物品（おむつ・衛生用品）",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "maker": { "type": "string" },
+        "category": { "type": "string" },
+        "name": { "type": "string" },
+        "capacity": { "type": "string" },
+        "size": { "type": "string" },
+        "priceInclTax": { "type": "number" },
+        "priceExclTax": { "type": "number" },
+        "sellingPrice": { "type": "number" },
+        "currentStock": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "category", "currentStock"]
+    },
+    "Stockpile": {
+      "title": "Stockpile",
+      "description": "施設・非常災害用BCP備蓄品",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "currentStock": { "type": "number" },
+        "requiredStock": { "type": "number" },
+        "unit": { "type": "string" },
+        "location": { "type": "string" },
+        "manager": { "type": "string" },
+        "notes": { "type": "string" },
+        "alertDismissed": { "type": "boolean" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "category", "currentStock"]
+    },
+    "Withdrawal": {
+      "title": "Withdrawal",
+      "description": "スマホ出庫①（利用者個別販売）出庫履歴",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "userName": { "type": "string" },
+        "staffName": { "type": "string" },
+        "productId": { "type": "string" },
+        "product": { "type": "object" },
+        "quantity": { "type": "number" },
+        "billingMonth": { "type": "string" },
+        "status": { "type": "string", "enum": ["unbilled", "billed"] },
+        "billedDate": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "date", "userName", "productId", "quantity"]
+    },
+    "StaffWithdrawal": {
+      "title": "StaffWithdrawal",
+      "description": "スマホ出庫②（施設・BCP備蓄）出庫履歴",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "office": { "type": "string" },
+        "category": { "type": "string" },
+        "itemName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "staffName": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "date", "office", "itemName", "quantity", "staffName"]
+    },
+    "UserMaster": {
+      "title": "UserMaster",
+      "description": "利用者名簿",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["name"]
+    },
+    "StaffMaster": {
+      "title": "StaffMaster",
+      "description": "職員名簿",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["name"]
+    },
+    "SystemMeta": {
+      "title": "SystemMeta",
+      "description": "システム設定およびバックアップ情報",
+      "type": "object",
+      "properties": {
+        "savedAt": { "type": "string" },
+        "savedBy": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "利用者販売用物品マスタ"
+    },
+    "/stockpiles/{stockpileId}": {
+      "schema": { "$ref": "#/entities/Stockpile" },
+      "description": "BCP備蓄品マスタ"
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": { "$ref": "#/entities/Withdrawal" },
+      "description": "スマホ出庫①の出庫記録"
+    },
+    "/staffWithdrawals/{staffWithdrawalId}": {
+      "schema": { "$ref": "#/entities/StaffWithdrawal" },
+      "description": "スマホ出庫②の出庫記録"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserMaster" },
+      "description": "利用者名簿"
+    },
+    "/staff/{staffId}": {
+      "schema": { "$ref": "#/entities/StaffMaster" },
+      "description": "職員名簿"
+    },
+    "/metadata/{docId}": {
+      "schema": { "$ref": "#/entities/SystemMeta" },
+      "description": "バックアップ状態メタデータ"
+    }
+  }
+}
