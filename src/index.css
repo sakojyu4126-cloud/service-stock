@@ -22,3 +22,92 @@
   animation: pulse-glow 2s infinite ease-in-out;
 }
 
+/* =========================================================================
+   Print & PDF Export Styling (A4 Landscape Optimization)
+   ========================================================================= */
+@media screen {
+  #printable-inventory-area {
+    display: none !important;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm 8mm 10mm 8mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 9pt !important;
+    line-height: 1.35 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide screen elements completely */
+  #app-screen-root,
+  .no-print,
+  nav,
+  header,
+  footer,
+  aside,
+  button,
+  input,
+  select,
+  .print-hidden {
+    display: none !important;
+  }
+
+  /* Display printable container cleanly */
+  #printable-inventory-area {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .print-page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 6px !important;
+    margin-bottom: 12px !important;
+  }
+
+  th, td {
+    border: 1px solid #64748b !important;
+    padding: 5px 6px !important;
+    font-size: 8.5pt !important;
+    color: #0f172a !important;
+  }
+
+  th {
+    background-color: #f1f5f9 !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+  }
+}
+

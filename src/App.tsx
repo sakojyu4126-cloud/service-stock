@@ -30,7 +30,9 @@ import {
   Database,
   Save,
   ShieldAlert,
-  ArrowUpDown
+  ArrowUpDown,
+  Printer,
+  FileText
 } from "lucide-react";
 import { Product, Withdrawal, Stockpile, ActiveTab } from "./types";
 
@@ -171,6 +173,12 @@ export default function App() {
   // Filter & Sort States (Product Catalog Screen)
   const [productSearchQuery, setProductSearchQuery] = useState("");
   const [productSortBy, setProductSortBy] = useState<string>("category");
+
+  // Print & PDF Export States (在庫管理 印刷・PDF保存)
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printTarget, setPrintTarget] = useState<"bcp" | "diaper" | "all">("bcp");
+  const [printFilter, setPrintFilter] = useState<"all" | "alert" | "filtered">("all");
+  const [printIncludeStamp, setPrintIncludeStamp] = useState(true);
 
   // Form States - Helper Withdrawal (Dynamic autocomplete)
   const [userInput, setUserInput] = useState("");
@@ -1935,8 +1943,56 @@ export default function App() {
   // Diaper stock alerts counter (where current stock <= 2)
   const activeDiaperAlertsCount = products.filter(p => p.currentStock !== undefined && p.currentStock <= 2).length;
 
+  // Printable data calculations for A4 print and PDF export
+  const printableStockpiles = useMemo(() => {
+    let list = stockpiles;
+    if (printFilter === "alert") {
+      list = stockpiles.filter(s => s.currentStock <= 1);
+    } else if (printFilter === "filtered") {
+      list = filteredStockpiles;
+    }
+    return [...list].sort((a, b) => {
+      const catOrderA = BCP_CAT_PRIORITY[a.category] || 99;
+      const catOrderB = BCP_CAT_PRIORITY[b.category] || 99;
+      if (catOrderA !== catOrderB) return catOrderA - catOrderB;
+      return (a.name || "").localeCompare(b.name || "", "ja");
+    });
+  }, [stockpiles, printFilter, filteredStockpiles, BCP_CAT_PRIORITY]);
+
+  const printableProducts = useMemo(() => {
+    let list = products;
+    if (printFilter === "alert") {
+      list = products.filter(p => p.currentStock !== undefined && p.currentStock <= 2);
+    } else if (printFilter === "filtered") {
+      list = filteredProducts;
+    }
+    return [...list].sort((a, b) => {
+      const catOrderA = PROD_CAT_PRIORITY[a.category] || 99;
+      const catOrderB = PROD_CAT_PRIORITY[b.category] || 99;
+      if (catOrderA !== catOrderB) return catOrderA - catOrderB;
+      if (a.maker !== b.maker) return (a.maker || "").localeCompare(b.maker || "", "ja");
+      return (a.name || "").localeCompare(b.name || "", "ja");
+    });
+  }, [products, printFilter, filteredProducts, PROD_CAT_PRIORITY]);
+
+  const openPrintModal = (target?: "bcp" | "diaper" | "all") => {
+    if (target) {
+      setPrintTarget(target);
+    } else {
+      setPrintTarget(stockSubTab === "diaper" ? "diaper" : "bcp");
+    }
+    setShowPrintModal(true);
+  };
+
+  const handleExecutePrint = () => {
+    setTimeout(() => {
+      window.print();
+    }, 50);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col antialiased">
+    <>
+      <div id="app-screen-root" className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col antialiased">
       
       {/* Top Professional Header Bar */}
       <header className="bg-lime-500 text-slate-900 shadow-sm border-b border-lime-600 shrink-0">
@@ -3246,32 +3302,47 @@ export default function App() {
               </div>
             </div>
 
-            {/* Sub Tabs for Stockpile View */}
-            <div className="flex border-b border-slate-200 bg-white p-1 rounded-lg shadow-xs">
+            {/* Sub Tabs & Print/PDF Export for Stockpile View */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-white p-1.5 rounded-xl border border-slate-200 shadow-xs">
+              <div className="flex flex-1 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setStockSubTab('bcp')}
+                  className={`flex-1 py-2 text-center text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer ${
+                    stockSubTab === 'bcp'
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  }`}
+                >
+                  ① 【施設・ヘルパー用】非常災害用・BCP備蓄資材 ({stockpiles.length}品目)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStockSubTab('diaper')}
+                  className={`flex-1 py-2 text-center text-xs sm:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    stockSubTab === 'diaper'
+                      ? "bg-teal-600 text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  }`}
+                >
+                  ② 【利用者販売用】おむつ類・介護手袋 ({products.length}品目)
+                  {activeDiaperAlertsCount > 0 && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full animate-pulse">
+                      {activeDiaperAlertsCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Master Print & PDF Save Button */}
               <button
-                onClick={() => setStockSubTab('bcp')}
-                className={`flex-1 py-2.5 text-center text-xs sm:text-sm font-bold rounded-md transition-all ${
-                  stockSubTab === 'bcp'
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                }`}
+                type="button"
+                onClick={() => openPrintModal()}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-lg font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                title="在庫管理一覧表を印刷、またはPDFファイルとして保存します"
               >
-                ① 【施設・ヘルパー用】非常災害用・BCP備蓄資材 ({stockpiles.length}品目)
-              </button>
-              <button
-                onClick={() => setStockSubTab('diaper')}
-                className={`flex-1 py-2.5 text-center text-xs sm:text-sm font-bold rounded-md transition-all flex items-center justify-center gap-1.5 ${
-                  stockSubTab === 'diaper'
-                    ? "bg-teal-600 text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                }`}
-              >
-                ② 【利用者販売用】おむつ類・介護手袋 ({products.length}品目)
-                {activeDiaperAlertsCount > 0 && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full animate-pulse">
-                    {activeDiaperAlertsCount}
-                  </span>
-                )}
+                <Printer className="h-4 w-4" />
+                <span>一覧表を印刷 / PDF保存</span>
               </button>
             </div>
 
@@ -3339,6 +3410,17 @@ export default function App() {
                       />
                       <span>⚠️ 残少アラート品のみ</span>
                     </label>
+
+                    {/* Print & PDF Button */}
+                    <button
+                      type="button"
+                      onClick={() => openPrintModal("bcp")}
+                      className="flex items-center gap-1.5 bg-white hover:bg-blue-50 text-blue-700 border border-blue-300 px-2.5 py-1 rounded-lg text-xs font-bold shadow-xs transition cursor-pointer"
+                      title="このBCP備蓄品一覧を印刷、またはPDFファイルとして保存します"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                      <span>印刷 / PDF</span>
+                    </button>
                   </div>
 
                 </div>
@@ -3532,8 +3614,19 @@ export default function App() {
                     衛生商品・おむつ類 在庫状況一覧 ({products.length}品目)
                   </h3>
                   
-                  <div className="text-xs text-slate-500 font-medium">
-                    ※ ヘルパーの「スマホ出庫」での登録により、在庫数はリアルタイムで自動減算されます。
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => openPrintModal("diaper")}
+                      className="flex items-center gap-1.5 bg-white hover:bg-teal-50 text-teal-700 border border-teal-300 px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs transition cursor-pointer"
+                      title="このおむつ類・商品マスタ一覧を印刷、またはPDFファイルとして保存します"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                      <span>印刷 / PDF</span>
+                    </button>
+                    <div className="text-xs text-slate-500 font-medium hidden sm:block">
+                      ※ ヘルパーの「スマホ出庫」での登録により、在庫数はリアルタイムで自動減算されます。
+                    </div>
                   </div>
                 </div>
 
@@ -4573,6 +4666,393 @@ export default function App() {
         </div>
       )}
 
+      {/* Print & PDF Export Modal */}
+      {showPrintModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in no-print">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 animate-scale-up">
+            
+            {/* Modal Header */}
+            <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-lg border border-indigo-500/30">
+                  <Printer className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold flex items-center gap-2">
+                    【在庫管理】一覧表の印刷・PDF保存
+                    <span className="text-[11px] font-normal px-2 py-0.5 bg-indigo-900/80 text-indigo-200 rounded border border-indigo-700">A4横向き対応</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-300">
+                    現在の登録品目や在庫数を、きれいな帳票レイアウトで紙に印刷、またはPDFファイルとして保存できます
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPrintModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg transition cursor-pointer"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
+              
+              {/* PDF How-To Guidance Banner */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-100 p-3.5 rounded-xl text-xs text-slate-700 space-y-1.5 shadow-xs">
+                <div className="font-bold text-indigo-950 flex items-center gap-1.5 text-sm">
+                  <FileText className="h-4 w-4 text-indigo-600" />
+                  PDFとして保存する手順（1クリックで簡単出力）
+                </div>
+                <div className="text-[11px] text-slate-600 leading-relaxed space-y-1">
+                  <p>
+                    ① 下の「<strong>🖨️ 印刷プレビューを開く / PDF保存</strong>」ボタンを押すと、お使いのブラウザの印刷画面が自動で開きます。
+                  </p>
+                  <p>
+                    ② 送信先（プリンター）の項目で『<strong>PDFに保存</strong>』（または『Microsoft Print to PDF』）を選択してください。
+                  </p>
+                  <p>
+                    ③ 「<strong>保存</strong>」ボタンをクリックすると、A4用紙サイズに最適化されたPDFファイルが端末にダウンロードされます。
+                  </p>
+                </div>
+              </div>
+
+              {/* Options Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
+                {/* 1. Target Selection */}
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">① 出力する一覧表:</label>
+                  <select
+                    value={printTarget}
+                    onChange={(e) => setPrintTarget(e.target.value as any)}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    <option value="bcp">BCP非常災害用備蓄資材 ({stockpiles.length}品目)</option>
+                    <option value="diaper">利用者販売用商品マスタ ({products.length}品目)</option>
+                    <option value="all">★ 両方をまとめて総合出力 ({stockpiles.length + products.length}品目)</option>
+                  </select>
+                </div>
+
+                {/* 2. Scope Filter */}
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">② 出力範囲・絞り込み:</label>
+                  <select
+                    value={printFilter}
+                    onChange={(e) => setPrintFilter(e.target.value as any)}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    <option value="all">全品目を出力</option>
+                    <option value="alert">⚠️ 在庫僅少・要発注品のみ</option>
+                    <option value="filtered">現在の画面の絞り込み/検索結果を出力</option>
+                  </select>
+                </div>
+
+                {/* 3. Stamp Box Checkbox */}
+                <div className="space-y-1 flex flex-col justify-end">
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white cursor-pointer select-none font-semibold text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={printIncludeStamp}
+                      onChange={(e) => setPrintIncludeStamp(e.target.checked)}
+                      className="rounded text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>検印欄（施設長・管理者枠）を表示</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Document Live Preview Box */}
+              <div className="border border-slate-300 rounded-xl overflow-hidden shadow-inner bg-slate-100 p-3">
+                <div className="text-[11px] font-bold text-slate-500 mb-2 flex items-center justify-between">
+                  <span>📄 帳票プレビュー（A4横向き・印字イメージ）:</span>
+                  <span>対象品目数: {
+                    printTarget === "bcp" ? printableStockpiles.length
+                    : printTarget === "diaper" ? printableProducts.length
+                    : printableStockpiles.length + printableProducts.length
+                  }品目</span>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 max-h-[36vh] overflow-y-auto text-[11px] space-y-3 font-sans">
+                  {/* Preview Header */}
+                  <div className="border-b-2 border-slate-800 pb-2 flex items-start justify-between">
+                    <div>
+                      <div className="text-[10px] text-slate-600 font-bold">社会福祉法人 桃の郷 京都東山</div>
+                      <h4 className="text-sm font-extrabold text-slate-900">
+                        {printTarget === "bcp" ? "【施設・非常災害用】BCP備蓄品・衛生消耗品 在庫管理一覧表"
+                          : printTarget === "diaper" ? "【利用者販売用】衛生商品・おむつ類 在庫管理一覧表"
+                          : "衛生用品＆備蓄資材 在庫管理総合一覧表"}
+                      </h4>
+                      <div className="text-[10px] text-slate-500 mt-0.5">
+                        出力日時: {new Date().toLocaleString("ja-JP")} / 発行責任者: 管理者
+                      </div>
+                    </div>
+                    {printIncludeStamp && (
+                      <div className="flex border border-slate-400 text-[9px] text-center">
+                        <div className="border-r border-slate-400 w-12 py-0.5 bg-slate-50 font-bold">施設長</div>
+                        <div className="border-r border-slate-400 w-12 py-0.5 bg-slate-50 font-bold">管理者</div>
+                        <div className="w-12 py-0.5 bg-slate-50 font-bold">担当者</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Preview Tables */}
+                  {(printTarget === "bcp" || printTarget === "all") && (
+                    <div className="space-y-1">
+                      <div className="font-bold text-xs text-blue-900">■ BCP非常災害用備蓄品 ({printableStockpiles.length}品目)</div>
+                      <table className="w-full border-collapse text-[10px]">
+                        <thead>
+                          <tr className="bg-slate-100 border border-slate-300">
+                            <th className="p-1 border border-slate-300 text-center w-8">No</th>
+                            <th className="p-1 border border-slate-300">出庫カテゴリ</th>
+                            <th className="p-1 border border-slate-300">品目（備蓄品名）</th>
+                            <th className="p-1 border border-slate-300 text-center">現在庫</th>
+                            <th className="p-1 border border-slate-300 text-center">必要量</th>
+                            <th className="p-1 border border-slate-300">保管場所</th>
+                            <th className="p-1 border border-slate-300 text-center">状況</th>
+                            <th className="p-1 border border-slate-300">備考</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {printableStockpiles.slice(0, 15).map((s, idx) => (
+                            <tr key={s.id} className="border-b border-slate-200">
+                              <td className="p-1 border border-slate-200 text-center">{idx + 1}</td>
+                              <td className="p-1 border border-slate-200">{s.category}</td>
+                              <td className="p-1 border border-slate-200 font-bold">{s.name}</td>
+                              <td className={`p-1 border border-slate-200 text-center font-bold ${s.currentStock <= 1 ? "text-rose-600" : ""}`}>
+                                {s.currentStock} {s.unit}
+                              </td>
+                              <td className="p-1 border border-slate-200 text-center">{s.requiredStock} {s.unit}</td>
+                              <td className="p-1 border border-slate-200">{s.location}</td>
+                              <td className="p-1 border border-slate-200 text-center font-bold">
+                                {s.currentStock <= 1 ? "⚠️要補充" : "適正"}
+                              </td>
+                              <td className="p-1 border border-slate-200 truncate max-w-[120px]">{s.notes || "-"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {printableStockpiles.length > 15 && (
+                        <div className="text-[10px] text-slate-500 text-center py-1">
+                          ... 他 {printableStockpiles.length - 15} 品目（印刷・PDF出力時は全品目が完全に出力されます）
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {(printTarget === "diaper" || printTarget === "all") && (
+                    <div className="space-y-1 pt-2">
+                      <div className="font-bold text-xs text-teal-900">■ 利用者販売用商品マスタ ({printableProducts.length}品目)</div>
+                      <table className="w-full border-collapse text-[10px]">
+                        <thead>
+                          <tr className="bg-slate-100 border border-slate-300">
+                            <th className="p-1 border border-slate-300 text-center w-8">No</th>
+                            <th className="p-1 border border-slate-300">カテゴリー</th>
+                            <th className="p-1 border border-slate-300">メーカー</th>
+                            <th className="p-1 border border-slate-300">商品名</th>
+                            <th className="p-1 border border-slate-300 text-center">現在庫</th>
+                            <th className="p-1 border border-slate-300 text-center">容量</th>
+                            <th className="p-1 border border-slate-300 text-center">サイズ</th>
+                            <th className="p-1 border border-slate-300 text-right">販売単価(税込)</th>
+                            <th className="p-1 border border-slate-300 text-center">状況</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {printableProducts.slice(0, 15).map((p, idx) => (
+                            <tr key={p.id} className="border-b border-slate-200">
+                              <td className="p-1 border border-slate-200 text-center">{idx + 1}</td>
+                              <td className="p-1 border border-slate-200">{p.category}</td>
+                              <td className="p-1 border border-slate-200">{p.maker}</td>
+                              <td className="p-1 border border-slate-200 font-bold">{p.name}</td>
+                              <td className={`p-1 border border-slate-200 text-center font-bold ${(p.currentStock ?? 0) <= 2 ? "text-rose-600" : ""}`}>
+                                {p.currentStock ?? 0} 個
+                              </td>
+                              <td className="p-1 border border-slate-200 text-center">{p.capacity}</td>
+                              <td className="p-1 border border-slate-200 text-center">{p.size}</td>
+                              <td className="p-1 border border-slate-200 text-right font-mono">¥{p.sellingPrice.toLocaleString()}</td>
+                              <td className="p-1 border border-slate-200 text-center font-bold">
+                                {(p.currentStock ?? 0) === 0 ? "🚨在庫切" : (p.currentStock ?? 0) <= 2 ? "⚠️僅少" : "適正"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="bg-slate-50 border-t border-slate-200 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <div className="text-xs text-slate-500 font-medium">
+                ※ 印刷プレビューで「送信先」を<strong>「PDFに保存」</strong>に変更するとPDFファイルが出力されます
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowPrintModal(false)}
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
+                >
+                  閉じる
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecutePrint}
+                  className="flex-1 sm:flex-none px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>🖨️ 印刷プレビューを開く / PDF保存</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
-  );
+
+    {/* =========================================================================
+        Dedicated A4 Print / PDF Document Layout
+        Hidden on screen via @media screen, visible only during window.print()
+        ========================================================================= */}
+    <div id="printable-inventory-area">
+      {/* Document Header */}
+      <div style={{ borderBottom: "2px solid #0f172a", paddingBottom: "8px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <div style={{ fontSize: "9pt", fontWeight: "bold", color: "#475569" }}>社会福祉法人 桃の郷 京都東山</div>
+          <h1 style={{ fontSize: "16pt", fontWeight: "900", color: "#0f172a", margin: "2px 0 4px 0" }}>
+            {printTarget === "bcp" ? "【施設・非常災害用】BCP備蓄品・衛生消耗品 在庫管理一覧表"
+              : printTarget === "diaper" ? "【利用者販売用】衛生商品・おむつ類 在庫管理一覧表"
+              : "衛生用品＆備蓄資材 在庫管理総合一覧表"}
+          </h1>
+          <div style={{ fontSize: "8.5pt", color: "#475569" }}>
+            出力日時: {new Date().toLocaleString("ja-JP")} ｜ 発行管理者: 管理者 ｜ 対象品目数: {
+              printTarget === "bcp" ? printableStockpiles.length
+              : printTarget === "diaper" ? printableProducts.length
+              : printableStockpiles.length + printableProducts.length
+            }品目
+          </div>
+        </div>
+
+        {printIncludeStamp && (
+          <div style={{ display: "flex", border: "1px solid #475569", fontSize: "8pt", textAlign: "center" }}>
+            <div style={{ borderRight: "1px solid #475569", width: "55px" }}>
+              <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>施設長</div>
+              <div style={{ height: "40px" }}></div>
+            </div>
+            <div style={{ borderRight: "1px solid #475569", width: "55px" }}>
+              <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>管理者</div>
+              <div style={{ height: "40px" }}></div>
+            </div>
+            <div style={{ borderRight: "1px solid #475569", width: "55px" }}>
+              <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>衛生管理</div>
+              <div style={{ height: "40px" }}></div>
+            </div>
+            <div style={{ width: "55px" }}>
+              <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>担当者</div>
+              <div style={{ height: "40px" }}></div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* BCP Table */}
+      {(printTarget === "bcp" || printTarget === "all") && (
+        <div style={{ marginBottom: printTarget === "all" ? "18px" : "0" }} className="print-avoid-break">
+          <div style={{ fontSize: "11pt", fontWeight: "bold", color: "#1e3a8a", marginBottom: "4px" }}>
+            ■ 【施設・非常災害用】BCP備蓄品・衛生消耗品リスト ({printableStockpiles.length}品目)
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: "30px", textAlign: "center" }}>No</th>
+                <th style={{ width: "170px" }}>出庫カテゴリ</th>
+                <th>品目（備蓄品名）</th>
+                <th style={{ width: "85px", textAlign: "center" }}>現在庫数</th>
+                <th style={{ width: "85px", textAlign: "center" }}>必要備蓄量</th>
+                <th style={{ width: "100px" }}>保管場所</th>
+                <th style={{ width: "70px", textAlign: "center" }}>状況</th>
+                <th style={{ width: "160px" }}>備考</th>
+              </tr>
+            </thead>
+            <tbody>
+              {printableStockpiles.map((s, idx) => (
+                <tr key={s.id}>
+                  <td style={{ textAlign: "center" }}>{idx + 1}</td>
+                  <td style={{ fontSize: "8pt" }}>{s.category}</td>
+                  <td style={{ fontWeight: "bold" }}>{s.name}</td>
+                  <td style={{ textAlign: "center", fontWeight: "bold", color: s.currentStock <= 1 ? "#dc2626" : "inherit" }}>
+                    {s.currentStock} {s.unit}
+                  </td>
+                  <td style={{ textAlign: "center" }}>{s.requiredStock} {s.unit}</td>
+                  <td>{s.location}</td>
+                  <td style={{ textAlign: "center", fontWeight: "bold", color: s.currentStock <= 1 ? "#dc2626" : "#166534" }}>
+                    {s.currentStock <= 1 ? "⚠️要補充" : "適正"}
+                  </td>
+                  <td style={{ fontSize: "8pt" }}>{s.notes || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Diaper / Products Table */}
+      {(printTarget === "diaper" || printTarget === "all") && (
+        <div className={printTarget === "all" ? "print-page-break" : ""}>
+          <div style={{ fontSize: "11pt", fontWeight: "bold", color: "#115e59", marginBottom: "4px" }}>
+            ■ 【利用者販売用】衛生商品・おむつ類マスタ一覧 ({printableProducts.length}品目)
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: "30px", textAlign: "center" }}>No</th>
+                <th style={{ width: "120px" }}>カテゴリー</th>
+                <th style={{ width: "85px" }}>メーカー</th>
+                <th>商品名（パッケージ名）</th>
+                <th style={{ width: "85px", textAlign: "center" }}>現在庫数</th>
+                <th style={{ width: "65px", textAlign: "center" }}>容量</th>
+                <th style={{ width: "65px", textAlign: "center" }}>サイズ</th>
+                <th style={{ width: "85px", textAlign: "right" }}>販売単価(税込)</th>
+                <th style={{ width: "80px", textAlign: "center" }}>状況</th>
+              </tr>
+            </thead>
+            <tbody>
+              {printableProducts.map((p, idx) => {
+                const stockVal = p.currentStock ?? 0;
+                return (
+                  <tr key={p.id}>
+                    <td style={{ textAlign: "center" }}>{idx + 1}</td>
+                    <td style={{ fontSize: "8pt" }}>{p.category}</td>
+                    <td>{p.maker}</td>
+                    <td style={{ fontWeight: "bold" }}>{p.name}</td>
+                    <td style={{ textAlign: "center", fontWeight: "bold", color: stockVal <= 2 ? "#dc2626" : "inherit" }}>
+                      {stockVal} 個
+                    </td>
+                    <td style={{ textAlign: "center" }}>{p.capacity}</td>
+                    <td style={{ textAlign: "center" }}>{p.size}</td>
+                    <td style={{ textAlign: "right" }}>¥{p.sellingPrice.toLocaleString()}</td>
+                    <td style={{ textAlign: "center", fontWeight: "bold", color: stockVal === 0 ? "#dc2626" : stockVal <= 2 ? "#d97706" : "#166534" }}>
+                      {stockVal === 0 ? "🚨在庫切" : stockVal <= 2 ? "⚠️僅少" : "適正"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Print Document Footer */}
+      <div style={{ marginTop: "12px", borderTop: "1px solid #cbd5e1", paddingTop: "4px", display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b" }}>
+        <div>社会福祉法人 桃の郷 京都東山 衛生用品＆備蓄 在庫管理システム</div>
+        <div>※ 本帳票は公的監査・備蓄定期点検・受発注管理の記録台帳としてご利用いただけます</div>
+        <div>出力日: {new Date().toLocaleDateString("ja-JP")}</div>
+      </div>
+    </div>
+  </>
+);
 }
