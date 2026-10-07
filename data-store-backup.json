@@ -1,9 +1,9 @@
 {
-  "savedAt": "2026-10-07T01:15:56.009Z",
-  "savedBy": "テスト管理者",
-  "productsCount": 15,
-  "stockpilesCount": 39,
-  "withdrawalsCount": 4,
+  "savedAt": "2026-10-07T01:31:51.795Z",
+  "savedBy": "管理者",
+  "productsCount": 14,
+  "stockpilesCount": 40,
+  "withdrawalsCount": 0,
   "data": {
     "products": [
       {
@@ -173,584 +173,491 @@
         "priceExclTax": 935,
         "sellingPrice": 1123,
         "currentStock": 1
-      },
-      {
-        "id": "p_muwkzpet_80w5n",
-        "maker": "アスクル",
-        "category": "テープ止めオムツ",
-        "name": "テープ止め　アスクル20枚",
-        "capacity": "20",
-        "size": "M",
-        "priceInclTax": 1000,
-        "priceExclTax": 909,
-        "sellingPrice": 1091,
-        "currentStock": 4
       }
     ],
     "stockpiles": [
       {
+        "id": "s1",
+        "name": "PVC使い捨て手袋S",
+        "category": "①衛生用品-1（日常業務用）",
+        "currentStock": 10,
+        "requiredStock": 10,
+        "unit": "箱",
+        "location": "5番館倉庫",
+        "manager": "衛生担当",
+        "notes": "パウダーフリーS",
+        "alertDismissed": false
+      },
+      {
         "id": "s2",
         "name": "PVC使い捨て手袋M",
+        "category": "①衛生用品-1（日常業務用）",
         "currentStock": 40,
         "requiredStock": 40,
         "unit": "箱",
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "パウダーフリーM",
-        "alertDismissed": false,
-        "category": "①衛生用品-1（日常業務用）"
+        "alertDismissed": false
       },
       {
         "id": "s3",
         "name": "PVC使い捨て手袋L",
+        "category": "①衛生用品-1（日常業務用）",
         "currentStock": 15,
         "requiredStock": 15,
         "unit": "箱",
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "パウダーフリーL",
-        "alertDismissed": false,
-        "category": "①衛生用品-1（日常業務用）"
+        "alertDismissed": false
       },
       {
         "id": "s4",
         "name": "流せるお尻拭き",
+        "category": "①衛生用品-1（日常業務用）",
         "currentStock": 20,
         "requiredStock": 20,
         "unit": "袋",
         "location": "5番館倉庫",
         "manager": "事務員",
-        "notes": "BCP用おしりふき",
-        "alertDismissed": false,
-        "category": "①衛生用品-1（日常業務用）"
+        "notes": "日常業務用おしりふき",
+        "alertDismissed": false
       },
       {
         "id": "s5",
         "name": "次亜塩素酸ナトリウム（12％）",
+        "category": "①衛生用品-1（日常業務用）",
         "currentStock": 3,
         "requiredStock": 3,
         "unit": "箱",
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "消毒・除菌剤",
-        "alertDismissed": false,
-        "category": "①衛生用品-1（日常業務用）"
+        "alertDismissed": false
       },
       {
         "id": "s6",
         "name": "消毒用アルコール（10L）",
+        "category": "①衛生用品-1（日常業務用）",
         "currentStock": 5,
         "requiredStock": 5,
         "unit": "箱",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "大容量10L",
-        "alertDismissed": false,
-        "category": "①衛生用品-1（日常業務用）"
+        "alertDismissed": false
       },
       {
         "id": "s7",
         "name": "消毒用アルコール（スプレー）",
+        "category": "①衛生用品-1（日常業務用）",
         "currentStock": 15,
         "requiredStock": 15,
         "unit": "本",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "各フロア設置用",
-        "alertDismissed": false,
-        "category": "①衛生用品-1（日常業務用）"
+        "alertDismissed": false
       },
       {
         "id": "s8",
         "name": "消毒用アルコール（5L）",
+        "category": "①衛生用品-1（日常業務用）",
         "currentStock": 5,
         "requiredStock": 5,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "大容量5L",
-        "alertDismissed": false,
-        "category": "①衛生用品-1（日常業務用）"
+        "alertDismissed": false
       },
       {
         "id": "s9",
         "name": "抗原検査キット",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 100,
         "requiredStock": 100,
         "unit": "キット",
         "location": "5番館倉庫",
         "manager": "管理職",
         "notes": "コロナ・インフル両方対応",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s10",
         "name": "マスク（N95高機能マスク）",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 200,
         "requiredStock": 200,
         "unit": "枚",
         "location": "5番館倉庫",
         "manager": "管理職",
         "notes": "医療・感染用",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s11",
         "name": "マスク（不織布）",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 500,
         "requiredStock": 500,
         "unit": "枚",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "日常業務・来客用",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s12",
         "name": "体温計（腋下）",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 10,
         "requiredStock": 10,
         "unit": "本",
         "location": "桃の郷事務所",
         "manager": "看護スタッフ",
         "notes": "接触型通常タイプ",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s13",
         "name": "体温計（非接触型）",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 5,
         "requiredStock": 5,
         "unit": "本",
         "location": "桃の郷事務所",
         "manager": "看護スタッフ",
         "notes": "検温用",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s14",
         "name": "パルスオキシメーター",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 5,
         "requiredStock": 5,
         "unit": "個",
         "location": "桃の郷事務所",
         "manager": "看護スタッフ",
         "notes": "SpO2測定用",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s15",
         "name": "アルコール綿（個包装）",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 1000,
         "requiredStock": 1000,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "看護スタッフ",
         "notes": "個包装（2枚入）",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s16",
         "name": "ガーゼ類",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 10,
         "requiredStock": 10,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "看護スタッフ",
         "notes": "滅菌ガーゼ",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s17",
         "name": "ガウン（薄手）",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 200,
         "requiredStock": 200,
         "unit": "枚",
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "不織布簡易ガウン",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s18",
         "name": "ガウン（厚手）",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 100,
         "requiredStock": 100,
         "unit": "枚",
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "撥水フルプロテクション",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s19",
         "name": "フェイスシールド",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 80,
         "requiredStock": 80,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "感染防止シールド",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s20",
         "name": "ゴーグル",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 10,
         "requiredStock": 10,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "保護メガネ",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s21",
         "name": "キャップ",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 200,
         "requiredStock": 200,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "ヘアカバー",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s22",
         "name": "紙コップ",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 200,
         "requiredStock": 200,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "非常災害・来客用",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s23",
         "name": "使い捨て食器（飯碗用）",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 100,
         "requiredStock": 100,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "非常災害時用 飯碗",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s24",
         "name": "使い捨て食器（汁物用）",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 100,
         "requiredStock": 100,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "非常災害時用 汁物",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s25",
         "name": "使い捨て食器（弁当スタイル）",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 100,
         "requiredStock": 100,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "非常災害時用 弁当",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s26",
         "name": "使い捨て食器（丼用）",
+        "category": "②衛生用品-2（BCP感染症対策）",
         "currentStock": 100,
         "requiredStock": 100,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "非常災害時用 丼",
-        "alertDismissed": false,
-        "category": "②衛生用品-2（BCP感染症対策）"
+        "alertDismissed": false
       },
       {
         "id": "s27",
         "name": "中性洗剤（厨房用）",
+        "category": "③消耗品類（洗剤など）",
         "currentStock": 2,
         "requiredStock": 2,
         "unit": "箱",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "厨房業務用",
-        "alertDismissed": false,
-        "category": "③消耗品類（洗剤など）"
+        "alertDismissed": false
       },
       {
         "id": "s28",
         "name": "中性洗剤（強力）",
+        "category": "③消耗品類（洗剤など）",
         "currentStock": 5,
         "requiredStock": 5,
         "unit": "本",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "頑固な汚れ落とし用",
-        "alertDismissed": false,
-        "category": "③消耗品類（洗剤など）"
+        "alertDismissed": false
       },
       {
         "id": "s29",
         "name": "ゴミ袋 大（45L）",
+        "category": "③消耗品類（洗剤など）",
         "currentStock": 50,
         "requiredStock": 50,
         "unit": "袋",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "業務用45L",
-        "alertDismissed": false,
-        "category": "③消耗品類（洗剤など）"
+        "alertDismissed": false
       },
       {
         "id": "s30",
         "name": "ゴミ袋 中（30L）",
+        "category": "③消耗品類（洗剤など）",
         "currentStock": 50,
         "requiredStock": 50,
         "unit": "袋",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "業務用30L",
-        "alertDismissed": false,
-        "category": "③消耗品類（洗剤など）"
+        "alertDismissed": false
       },
       {
         "id": "s31",
         "name": "薬用ハンドソープ（5L）",
+        "category": "③消耗品類（洗剤など）",
         "currentStock": 10,
         "requiredStock": 10,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "手洗い場詰替え用",
-        "alertDismissed": false,
-        "category": "③消耗品類（洗剤など）"
+        "alertDismissed": false
       },
       {
         "id": "s32",
         "name": "手指消毒ジェル",
+        "category": "③消耗品類（洗剤など）",
         "currentStock": 20,
         "requiredStock": 20,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "携帯・卓上用",
-        "alertDismissed": false,
-        "category": "③消耗品類（洗剤など）"
+        "alertDismissed": false
       },
       {
         "id": "s33",
         "name": "ハイター",
+        "category": "③消耗品類（洗剤など）",
         "currentStock": 5,
         "requiredStock": 5,
         "unit": "本",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "漂白・除菌用",
-        "alertDismissed": false,
-        "category": "③消耗品類（洗剤など）"
+        "alertDismissed": false
       },
       {
         "id": "s34",
         "name": "ウタマロ",
+        "category": "③消耗品類（洗剤など）",
         "currentStock": 5,
         "requiredStock": 5,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "部分汚れ用",
-        "alertDismissed": false,
-        "category": "③消耗品類（洗剤など）"
+        "alertDismissed": false
       },
       {
         "id": "s35",
         "name": "トイレクリーナー液（5L）",
+        "category": "③消耗品類（洗剤など）",
         "currentStock": 3,
         "requiredStock": 3,
         "unit": "本",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "トイレ清掃用",
-        "alertDismissed": false,
-        "category": "③消耗品類（洗剤など）"
+        "alertDismissed": false
       },
       {
         "id": "s36",
         "name": "シャンプー／リンス",
+        "category": "④デイサービス",
         "currentStock": 5,
         "requiredStock": 5,
         "unit": "本",
         "location": "デイサービス浴室",
         "manager": "介護スタッフ",
         "notes": "利用者お風呂用",
-        "alertDismissed": false,
-        "category": "④デイサービス"
+        "alertDismissed": false
       },
       {
         "id": "s37",
         "name": "ボディソープ",
+        "category": "④デイサービス",
         "currentStock": 5,
         "requiredStock": 5,
         "unit": "本",
         "location": "デイサービス浴室",
         "manager": "介護スタッフ",
         "notes": "利用者お風呂用",
-        "alertDismissed": false,
-        "category": "④デイサービス"
+        "alertDismissed": false
       },
       {
         "id": "s38",
         "name": "トイレットペーパー",
+        "category": "④デイサービス",
         "currentStock": 120,
         "requiredStock": 120,
         "unit": "個",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "消耗品",
-        "alertDismissed": false,
-        "category": "④デイサービス"
+        "alertDismissed": false
       },
       {
         "id": "s39",
         "name": "ハンドペーパー",
-        "currentStock": 270,
+        "category": "④デイサービス",
+        "currentStock": 250,
         "requiredStock": 250,
         "unit": "袋",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "ペーパータオル",
-        "alertDismissed": false,
-        "category": "④デイサービス"
+        "alertDismissed": false
       },
       {
         "id": "s40",
         "name": "お風呂洗剤（4L）",
+        "category": "④デイサービス",
         "currentStock": 3,
         "requiredStock": 3,
         "unit": "本",
         "location": "デイサービス浴室",
         "manager": "介護スタッフ",
         "notes": "お風呂清掃用",
-        "alertDismissed": false,
-        "category": "④デイサービス"
+        "alertDismissed": false
       }
     ],
-    "withdrawals": [
-      {
-        "id": "w1",
-        "date": "2026-07-05 10:30",
-        "userName": "中島義昭 様",
-        "staffName": "山田",
-        "productId": "p1",
-        "product": {
-          "id": "p1",
-          "maker": "リフレ",
-          "category": "尿取りパット類",
-          "name": "スピードキャッチパッド スーパー(10回吸収)",
-          "capacity": "30枚",
-          "size": "-",
-          "priceInclTax": 2273,
-          "priceExclTax": 2066,
-          "sellingPrice": 2480,
-          "currentStock": 12
-        },
-        "quantity": 1,
-        "billingMonth": "7月",
-        "status": "billed",
-        "billedDate": "2026-07-07"
-      },
-      {
-        "id": "w2",
-        "date": "2026-07-05 11:45",
-        "userName": "中島富美子 様",
-        "staffName": "佐藤",
-        "productId": "p2",
-        "product": {
-          "id": "p2",
-          "maker": "いちばん",
-          "category": "リハビリパンツ",
-          "name": "幅広フィット テープ止めタイプ",
-          "capacity": "20枚",
-          "size": "M",
-          "priceInclTax": 1618,
-          "priceExclTax": 1471,
-          "sellingPrice": 1765,
-          "currentStock": 5
-        },
-        "quantity": 1,
-        "billingMonth": "7月",
-        "status": "unbilled",
-        "billedDate": null
-      },
-      {
-        "id": "w3",
-        "date": "2026-07-01 14:15",
-        "userName": "大西 様",
-        "staffName": "高橋",
-        "productId": "p3",
-        "product": {
-          "id": "p3",
-          "maker": "リフレ",
-          "category": "リハビリパンツ",
-          "name": "はくパンツ 軽やかなうす型",
-          "capacity": "34枚",
-          "size": "M",
-          "priceInclTax": 2205,
-          "priceExclTax": 2005,
-          "sellingPrice": 2406,
-          "currentStock": 0
-        },
-        "quantity": 1,
-        "billingMonth": "7月",
-        "status": "unbilled",
-        "billedDate": null
-      },
-      {
-        "id": "w4",
-        "date": "2026-06-20 09:10",
-        "userName": "森 様",
-        "staffName": "山田",
-        "productId": "p4",
-        "product": {
-          "id": "p4",
-          "maker": "リフレ",
-          "category": "テープ止めオムツ",
-          "name": "簡単テープ止めタイプ",
-          "capacity": "30枚",
-          "size": "M",
-          "priceInclTax": 2965,
-          "priceExclTax": 2695,
-          "sellingPrice": 3235,
-          "currentStock": 2
-        },
-        "quantity": 1,
-        "billingMonth": "7月",
-        "status": "unbilled",
-        "billedDate": null
-      }
-    ],
+    "withdrawals": [],
     "users": [
       "中島義昭 様",
       "中島富美子 様",
@@ -762,43 +669,12 @@
       "佐藤",
       "高橋",
       "渡辺",
-      "鈴木",
-      "テスト職員"
+      "鈴木"
     ],
-    "staffWithdrawals": [
-      {
-        "id": "sw_phgg494zu",
-        "date": "2026-10-06 17:00",
-        "office": "デイサービス",
-        "category": "②衛生用品-2（BCP感染症対策）",
-        "itemName": "テスト用デイサービス特注タオル",
-        "quantity": 5,
-        "staffName": "テスト職員"
-      }
-    ],
-    "deletedStockpiles": [
-      "新規テスト備蓄品a",
-      "テスト品目",
-      "テスト用デイサビス特注タオル",
-      "pvc使い捨て手袋s",
-      "テスト用デイサビス特注タオル更新済",
-      "テスト品"
-    ],
-    "deletedStockpileIds": [
-      "s_muxb0wzi_gvq69",
-      "s_muxbi2dz_ophao",
-      "s_muxbwfnk_npx8q",
-      "s1",
-      "s_muxc9wbe_tm92t",
-      "s_muxca0k4_5z14r"
-    ],
-    "deletedProducts": [
-      "新規テスト商品p",
-      "テスト尿取りパットz"
-    ],
-    "deletedProductIds": [
-      "p_muxb0x0a_r3kjf",
-      "p_muxc9wcc_ot4i8"
-    ]
+    "staffWithdrawals": [],
+    "deletedProducts": [],
+    "deletedProductIds": [],
+    "deletedStockpiles": [],
+    "deletedStockpileIds": []
   }
 }

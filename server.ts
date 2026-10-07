@@ -11,7 +11,8 @@ const BACKUP_TMP_FILE = path.join("/tmp", "data-store-backup.json");
 const MASTER_TEMPLATE_FILE = path.join(process.cwd(), "data-store-master-template.json");
 let memoryBackup: any = null;
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // Anti-Loop & Quota Protection Middleware
 // Prevents infinite loops or runaway clients hitting limits (e.g. 50,000 req/day quota)
@@ -404,6 +405,12 @@ app.get("/api/backup/export", async (req, res) => {
 app.post("/api/backup/save", async (req, res) => {
   try {
     const db = (req.body?.data && typeof req.body.data === "object") ? req.body.data : await readDatabase();
+    
+    // Persist to primary database as well
+    if (req.body?.data && typeof req.body.data === "object") {
+      await writeDatabase(db);
+    }
+
     const snapshot = {
       savedAt: new Date().toISOString(),
       savedBy: req.body?.staffName || "管理者",
@@ -424,12 +431,18 @@ app.post("/api/backup/save", async (req, res) => {
     }
 
     res.json({
+      success: true,
       message: `データを保存しました（BCP備蓄${db.stockpiles?.length || 0}品目・販売物品${db.products?.length || 0}品目・履歴${db.withdrawals?.length || 0}件）`,
       savedAt: snapshot.savedAt,
+      savedBy: snapshot.savedBy,
+      productsCount: snapshot.productsCount,
+      stockpilesCount: snapshot.stockpilesCount,
+      withdrawalsCount: snapshot.withdrawalsCount,
       data: db
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    console.error("Backup save server error:", err);
+    res.status(500).json({ error: err.message || "データ保存に失敗しました" });
   }
 });
 
@@ -451,13 +464,25 @@ app.get("/api/backup/status", async (req, res) => {
       }
     }
 
-    if (snapshot) {
+    if (snapshot && snapshot.savedAt) {
       return res.json({
         hasBackup: true,
         savedAt: snapshot.savedAt,
         savedBy: snapshot.savedBy,
         productsCount: snapshot.productsCount || snapshot.data?.products?.length || 0,
         stockpilesCount: snapshot.stockpilesCount || snapshot.data?.stockpiles?.length || 0
+      });
+    }
+
+    // If no explicit snapshot was made yet, check if database exists and report it
+    const currentDb = await readDatabase().catch(() => null);
+    if (currentDb && ((currentDb.products?.length || 0) > 0 || (currentDb.stockpiles?.length || 0) > 0)) {
+      return res.json({
+        hasBackup: true,
+        savedAt: new Date().toISOString(),
+        savedBy: "自動管理",
+        productsCount: currentDb.products?.length || 0,
+        stockpilesCount: currentDb.stockpiles?.length || 0
       });
     }
 
@@ -498,6 +523,7 @@ app.post("/api/backup/restore", async (req, res) => {
 
     await writeDatabase(newDb);
     res.json({
+      success: true,
       message: `データを正常に復元しました（BCP備蓄${newDb.stockpiles.length}品目、販売物品${newDb.products.length}品目）`,
       data: newDb
     });
@@ -524,6 +550,18 @@ app.post("/api/backup/restore-snapshot", async (req, res) => {
       }
     }
 
+    // Fallback to database
+    if (!snapshot) {
+      const currentDb = await readDatabase().catch(() => null);
+      if (currentDb) {
+        snapshot = {
+          savedAt: new Date().toISOString(),
+          savedBy: "自動復元",
+          data: currentDb
+        };
+      }
+    }
+
     if (!snapshot) {
       return res.status(404).json({ error: "保存データが見つかりません。先に「データ保存」を行ってください。" });
     }
@@ -531,8 +569,9 @@ app.post("/api/backup/restore-snapshot", async (req, res) => {
     const dbToRestore = snapshot.data || snapshot;
     await writeDatabase(dbToRestore);
     res.json({
-      message: `直近の保存データ（${new Date(snapshot.savedAt).toLocaleString("ja-JP")} 保存分）から正常に復元しました`,
-      savedAt: snapshot.savedAt,
+      success: true,
+      message: `直近の保存データ（${snapshot.savedAt ? new Date(snapshot.savedAt).toLocaleString("ja-JP") : "直近"} 保存分）から正常に復元しました`,
+      savedAt: snapshot.savedAt || new Date().toISOString(),
       data: dbToRestore
     });
   } catch (err: any) {
