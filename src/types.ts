@@ -30,6 +30,7 @@ export interface Stockpile {
   currentStock: number;
   requiredStock: number;
   unit: string;
+  category?: string; // ①衛生用品-1（日常業務用）, ②衛生用品-2（BCP感染症対策）, ③消耗品類（洗剤など）, ④デイサービス
   location: string;
   manager: string;
   notes: string;

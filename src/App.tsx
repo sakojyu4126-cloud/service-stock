@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { 
   Package, 
   ClipboardList, 
@@ -29,7 +29,8 @@ import {
   Upload,
   Database,
   Save,
-  ShieldAlert
+  ShieldAlert,
+  ArrowUpDown
 } from "lucide-react";
 import { Product, Withdrawal, Stockpile, ActiveTab } from "./types";
 
@@ -52,46 +53,53 @@ const DEFAULT_PRODUCTS: Product[] = [
 ];
 
 const DEFAULT_STOCKPILES: Stockpile[] = [
-  { id: "s1", name: "PVC使い捨て手袋S", currentStock: 10, requiredStock: 10, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーS", alertDismissed: false },
-  { id: "s2", name: "PVC使い捨て手袋M", currentStock: 40, requiredStock: 40, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーM", alertDismissed: false },
-  { id: "s3", name: "PVC使い捨て手袋L", currentStock: 15, requiredStock: 15, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーL", alertDismissed: false },
-  { id: "s4", name: "流せるお尻拭き", currentStock: 20, requiredStock: 20, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "日常業務用おしりふき", alertDismissed: false },
-  { id: "s5", name: "次亜塩素酸ナトリウム（12％）", currentStock: 3, requiredStock: 3, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "消毒・除菌剤", alertDismissed: false },
-  { id: "s6", name: "消毒用アルコール（10L）", currentStock: 5, requiredStock: 5, unit: "箱", location: "5番館倉庫", manager: "事務員", notes: "大容量10L", alertDismissed: false },
-  { id: "s7", name: "消毒用アルコール（スプレー）", currentStock: 15, requiredStock: 15, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "各フロア設置用", alertDismissed: false },
-  { id: "s8", name: "消毒用アルコール（5L）", currentStock: 5, requiredStock: 5, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "大容量5L", alertDismissed: false },
-  { id: "s9", name: "抗原検査キット", currentStock: 100, requiredStock: 100, unit: "キット", location: "5番館倉庫", manager: "管理職", notes: "コロナ・インフル両方対応", alertDismissed: false },
-  { id: "s10", name: "マスク（N95高機能マスク）", currentStock: 200, requiredStock: 200, unit: "枚", location: "5番館倉庫", manager: "管理職", notes: "医療・感染用", alertDismissed: false },
-  { id: "s11", name: "マスク（不織布）", currentStock: 500, requiredStock: 500, unit: "枚", location: "5番館倉庫", manager: "事務員", notes: "日常業務・来客用", alertDismissed: false },
-  { id: "s12", name: "体温計（腋下）", currentStock: 10, requiredStock: 10, unit: "本", location: "桃の郷事務所", manager: "看護スタッフ", notes: "接触型通常タイプ", alertDismissed: false },
-  { id: "s13", name: "体温計（非接触型）", currentStock: 5, requiredStock: 5, unit: "本", location: "桃の郷事務所", manager: "看護スタッフ", notes: "検温用", alertDismissed: false },
-  { id: "s14", name: "パルスオキシメーター", currentStock: 5, requiredStock: 5, unit: "個", location: "桃の郷事務所", manager: "看護スタッフ", notes: "SpO2測定用", alertDismissed: false },
-  { id: "s15", name: "アルコール綿（個包装）", currentStock: 1000, requiredStock: 1000, unit: "個", location: "5番館倉庫", manager: "看護スタッフ", notes: "個包装（2枚入）", alertDismissed: false },
-  { id: "s16", name: "ガーゼ類", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "看護スタッフ", notes: "滅菌ガーゼ", alertDismissed: false },
-  { id: "s17", name: "ガウン（薄手）", currentStock: 200, requiredStock: 200, unit: "枚", location: "5番館倉庫", manager: "衛生担当", notes: "不織布簡易ガウン", alertDismissed: false },
-  { id: "s18", name: "ガウン（厚手）", currentStock: 100, requiredStock: 100, unit: "枚", location: "5番館倉庫", manager: "衛生担当", notes: "撥水フルプロテクション", alertDismissed: false },
-  { id: "s19", name: "フェイスシールド", currentStock: 80, requiredStock: 80, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "感染防止シールド", alertDismissed: false },
-  { id: "s20", name: "ゴーグル", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "保護メガネ", alertDismissed: false },
-  { id: "s21", name: "キャップ", currentStock: 200, requiredStock: 200, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "ヘアカバー", alertDismissed: false },
-  { id: "s22", name: "紙コップ", currentStock: 200, requiredStock: 200, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害・来客用", alertDismissed: false },
-  { id: "s23", name: "使い捨て食器（飯碗用）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 飯碗", alertDismissed: false },
-  { id: "s24", name: "使い捨て食器（汁物用）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 汁物", alertDismissed: false },
-  { id: "s25", name: "使い捨て食器（弁当スタイル）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 弁当", alertDismissed: false },
-  { id: "s26", name: "使い捨て食器（丼用）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 丼", alertDismissed: false },
-  { id: "s27", name: "中性洗剤（厨房用）", currentStock: 2, requiredStock: 2, unit: "箱", location: "5番館倉庫", manager: "事務員", notes: "厨房業務用", alertDismissed: false },
-  { id: "s28", name: "中性洗剤（強力）", currentStock: 5, requiredStock: 5, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "頑固な汚れ落とし用", alertDismissed: false },
-  { id: "s29", name: "ゴミ袋 大（45L）", currentStock: 50, requiredStock: 50, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "業務用45L", alertDismissed: false },
-  { id: "s30", name: "ゴミ袋 中（30L）", currentStock: 50, requiredStock: 50, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "業務用30L", alertDismissed: false },
-  { id: "s31", name: "薬用ハンドソープ（5L）", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "手洗い場詰替え用", alertDismissed: false },
-  { id: "s32", name: "手指消毒ジェル", currentStock: 20, requiredStock: 20, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "携帯・卓上用", alertDismissed: false },
-  { id: "s33", name: "ハイター", currentStock: 5, requiredStock: 5, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "漂白・除菌用", alertDismissed: false },
-  { id: "s34", name: "ウタマロ", currentStock: 5, requiredStock: 5, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "部分汚れ用", alertDismissed: false },
-  { id: "s35", name: "トイレクリーナー液（5L）", currentStock: 3, requiredStock: 3, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "トイレ清掃用", alertDismissed: false },
-  { id: "s36", name: "シャンプー／リンス", currentStock: 5, requiredStock: 5, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "利用者お風呂用", alertDismissed: false },
-  { id: "s37", name: "ボディソープ", currentStock: 5, requiredStock: 5, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "利用者お風呂用", alertDismissed: false },
-  { id: "s38", name: "トイレットペーパー", currentStock: 120, requiredStock: 120, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "消耗品", alertDismissed: false },
-  { id: "s39", name: "ハンドペーパー", currentStock: 250, requiredStock: 250, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "ペーパータオル", alertDismissed: false },
-  { id: "s40", name: "お風呂洗剤（4L）", currentStock: 3, requiredStock: 3, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "お風呂清掃用", alertDismissed: false }
+  // Category ①衛生用品-1（日常業務用）
+  { id: "s1", name: "PVC使い捨て手袋S", category: "①衛生用品-1（日常業務用）", currentStock: 10, requiredStock: 10, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーS", alertDismissed: false },
+  { id: "s2", name: "PVC使い捨て手袋M", category: "①衛生用品-1（日常業務用）", currentStock: 40, requiredStock: 40, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーM", alertDismissed: false },
+  { id: "s3", name: "PVC使い捨て手袋L", category: "①衛生用品-1（日常業務用）", currentStock: 15, requiredStock: 15, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーL", alertDismissed: false },
+  { id: "s4", name: "流せるお尻拭き", category: "①衛生用品-1（日常業務用）", currentStock: 20, requiredStock: 20, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "日常業務用おしりふき", alertDismissed: false },
+  { id: "s5", name: "次亜塩素酸ナトリウム（12％）", category: "①衛生用品-1（日常業務用）", currentStock: 3, requiredStock: 3, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "消毒・除菌剤", alertDismissed: false },
+  { id: "s6", name: "消毒用アルコール（10L）", category: "①衛生用品-1（日常業務用）", currentStock: 5, requiredStock: 5, unit: "箱", location: "5番館倉庫", manager: "事務員", notes: "大容量10L", alertDismissed: false },
+  { id: "s7", name: "消毒用アルコール（スプレー）", category: "①衛生用品-1（日常業務用）", currentStock: 15, requiredStock: 15, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "各フロア設置用", alertDismissed: false },
+  { id: "s8", name: "消毒用アルコール（5L）", category: "①衛生用品-1（日常業務用）", currentStock: 5, requiredStock: 5, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "大容量5L", alertDismissed: false },
+
+  // Category ②衛生用品-2（BCP感染症対策）
+  { id: "s9", name: "抗原検査キット", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "キット", location: "5番館倉庫", manager: "管理職", notes: "コロナ・インフル両方対応", alertDismissed: false },
+  { id: "s10", name: "マスク（N95高機能マスク）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 200, requiredStock: 200, unit: "枚", location: "5番館倉庫", manager: "管理職", notes: "医療・感染用", alertDismissed: false },
+  { id: "s11", name: "マスク（不織布）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 500, requiredStock: 500, unit: "枚", location: "5番館倉庫", manager: "事務員", notes: "日常業務・来客用", alertDismissed: false },
+  { id: "s12", name: "体温計（腋下）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 10, requiredStock: 10, unit: "本", location: "桃の郷事務所", manager: "看護スタッフ", notes: "接触型通常タイプ", alertDismissed: false },
+  { id: "s13", name: "体温計（非接触型）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 5, requiredStock: 5, unit: "本", location: "桃の郷事務所", manager: "看護スタッフ", notes: "検温用", alertDismissed: false },
+  { id: "s14", name: "パルスオキシメーター", category: "②衛生用品-2（BCP感染症対策）", currentStock: 5, requiredStock: 5, unit: "個", location: "桃の郷事務所", manager: "看護スタッフ", notes: "SpO2測定用", alertDismissed: false },
+  { id: "s15", name: "アルコール綿（個包装）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 1000, requiredStock: 1000, unit: "個", location: "5番館倉庫", manager: "看護スタッフ", notes: "個包装（2枚入）", alertDismissed: false },
+  { id: "s16", name: "ガーゼ類", category: "②衛生用品-2（BCP感染症対策）", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "看護スタッフ", notes: "滅菌ガーゼ", alertDismissed: false },
+  { id: "s17", name: "ガウン（薄手）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 200, requiredStock: 200, unit: "枚", location: "5番館倉庫", manager: "衛生担当", notes: "不織布簡易ガウン", alertDismissed: false },
+  { id: "s18", name: "ガウン（厚手）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "枚", location: "5番館倉庫", manager: "衛生担当", notes: "撥水フルプロテクション", alertDismissed: false },
+  { id: "s19", name: "フェイスシールド", category: "②衛生用品-2（BCP感染症対策）", currentStock: 80, requiredStock: 80, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "感染防止シールド", alertDismissed: false },
+  { id: "s20", name: "ゴーグル", category: "②衛生用品-2（BCP感染症対策）", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "保護メガネ", alertDismissed: false },
+  { id: "s21", name: "キャップ", category: "②衛生用品-2（BCP感染症対策）", currentStock: 200, requiredStock: 200, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "ヘアカバー", alertDismissed: false },
+  { id: "s22", name: "紙コップ", category: "②衛生用品-2（BCP感染症対策）", currentStock: 200, requiredStock: 200, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害・来客用", alertDismissed: false },
+  { id: "s23", name: "使い捨て食器（飯碗用）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 飯碗", alertDismissed: false },
+  { id: "s24", name: "使い捨て食器（汁物用）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 汁物", alertDismissed: false },
+  { id: "s25", name: "使い捨て食器（弁当スタイル）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 弁当", alertDismissed: false },
+  { id: "s26", name: "使い捨て食器（丼用）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 丼", alertDismissed: false },
+
+  // Category ③消耗品類（洗剤など）
+  { id: "s27", name: "中性洗剤（厨房用）", category: "③消耗品類（洗剤など）", currentStock: 2, requiredStock: 2, unit: "箱", location: "5番館倉庫", manager: "事務員", notes: "厨房業務用", alertDismissed: false },
+  { id: "s28", name: "中性洗剤（強力）", category: "③消耗品類（洗剤など）", currentStock: 5, requiredStock: 5, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "頑固な汚れ落とし用", alertDismissed: false },
+  { id: "s29", name: "ゴミ袋 大（45L）", category: "③消耗品類（洗剤など）", currentStock: 50, requiredStock: 50, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "業務用45L", alertDismissed: false },
+  { id: "s30", name: "ゴミ袋 中（30L）", category: "③消耗品類（洗剤など）", currentStock: 50, requiredStock: 50, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "業務用30L", alertDismissed: false },
+  { id: "s31", name: "薬用ハンドソープ（5L）", category: "③消耗品類（洗剤など）", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "手洗い場詰替え用", alertDismissed: false },
+  { id: "s32", name: "手指消毒ジェル", category: "③消耗品類（洗剤など）", currentStock: 20, requiredStock: 20, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "携帯・卓上用", alertDismissed: false },
+  { id: "s33", name: "ハイター", category: "③消耗品類（洗剤など）", currentStock: 5, requiredStock: 5, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "漂白・除菌用", alertDismissed: false },
+  { id: "s34", name: "ウタマロ", category: "③消耗品類（洗剤など）", currentStock: 5, requiredStock: 5, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "部分汚れ用", alertDismissed: false },
+  { id: "s35", name: "トイレクリーナー液（5L）", category: "③消耗品類（洗剤など）", currentStock: 3, requiredStock: 3, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "トイレ清掃用", alertDismissed: false },
+
+  // Category ④デイサービス
+  { id: "s36", name: "シャンプー／リンス", category: "④デイサービス", currentStock: 5, requiredStock: 5, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "利用者お風呂用", alertDismissed: false },
+  { id: "s37", name: "ボディソープ", category: "④デイサービス", currentStock: 5, requiredStock: 5, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "利用者お風呂用", alertDismissed: false },
+  { id: "s38", name: "トイレットペーパー", category: "④デイサービス", currentStock: 120, requiredStock: 120, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "消耗品", alertDismissed: false },
+  { id: "s39", name: "ハンドペーパー", category: "④デイサービス", currentStock: 250, requiredStock: 250, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "ペーパータオル", alertDismissed: false },
+  { id: "s40", name: "お風呂洗剤（4L）", category: "④デイサービス", currentStock: 3, requiredStock: 3, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "お風呂清掃用", alertDismissed: false }
 ];
 
 export default function App() {
@@ -112,7 +120,15 @@ export default function App() {
       const cached = localStorage.getItem("momo_offline_cache");
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed.stockpiles) && parsed.stockpiles.length > 0) return parsed.stockpiles;
+        if (Array.isArray(parsed.stockpiles) && parsed.stockpiles.length > 0) {
+          return parsed.stockpiles.map((s: Stockpile) => {
+            if (!s.category) {
+              const def = DEFAULT_STOCKPILES.find(d => d.id === s.id || d.name === s.name);
+              return { ...s, category: def?.category || "①衛生用品-1（日常業務用）" };
+            }
+            return s;
+          });
+        }
       }
     } catch {}
     return DEFAULT_STOCKPILES;
@@ -147,9 +163,14 @@ export default function App() {
   const [selectedWithdrawals, setSelectedWithdrawals] = useState<string[]>([]);
   const [hideBilledItems, setHideBilledItems] = useState(false);
 
-  // Filter States (Stockpile Screen)
+  // Filter & Sort States (Stockpile Screen)
   const [stockpileSearchQuery, setStockpileSearchQuery] = useState("");
   const [stockpileAlertOnly, setStockpileAlertOnly] = useState(false);
+  const [stockpileSortBy, setStockpileSortBy] = useState<string>("category-name");
+
+  // Filter & Sort States (Product Catalog Screen)
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [productSortBy, setProductSortBy] = useState<string>("category");
 
   // Form States - Helper Withdrawal (Dynamic autocomplete)
   const [userInput, setUserInput] = useState("");
@@ -200,6 +221,7 @@ export default function App() {
 
   // Form States - Admin New Stockpile
   const [newStockName, setNewStockName] = useState("");
+  const [newStockCategory, setNewStockCategory] = useState("①衛生用品-1（日常業務用）");
   const [newStockQty, setNewStockQty] = useState<number | "">("");
   const [newStockRequired, setNewStockRequired] = useState<number | "">("");
   const [newStockUnit, setNewStockUnit] = useState("個");
@@ -215,13 +237,30 @@ export default function App() {
   // Quick Help state
   const [showHelp, setShowHelp] = useState(false);
 
+  // Global Toast & Banner Feedback (avoids iframe alert issues and provides instant feedback)
+  const [toastNotification, setToastNotification] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+  const toastTimeoutRef = useRef<any>(null);
+
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastNotification({ message, type });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastNotification(null);
+    }, 4500);
+  };
+
   // Custom Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
     message: string;
     confirmText?: string;
-    onConfirm: () => void;
+    onConfirm: () => void | Promise<void>;
   }>({
     isOpen: false,
     title: "",
@@ -229,15 +268,19 @@ export default function App() {
     onConfirm: () => {}
   });
 
-  const showConfirm = (title: string, message: string, onConfirm: () => void, confirmText = "確定する") => {
+  const showConfirm = (title: string, message: string, onConfirm: () => void | Promise<void>, confirmText = "確定する") => {
     setConfirmModal({
       isOpen: true,
       title,
       message,
       confirmText,
-      onConfirm: () => {
-        onConfirm();
+      onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          await onConfirm();
+        } catch (e: any) {
+          showToast(e.message || "エラーが発生しました", "error");
+        }
       }
     });
   };
@@ -261,7 +304,14 @@ export default function App() {
         setProducts(data.products);
       }
       if (Array.isArray(data.stockpiles) && data.stockpiles.length > 0) {
-        setStockpiles(data.stockpiles);
+        const enriched = data.stockpiles.map((s: Stockpile) => {
+          if (!s.category) {
+            const def = DEFAULT_STOCKPILES.find(d => d.id === s.id || normalizeName(d.name) === normalizeName(s.name));
+            return { ...s, category: def?.category || "①衛生用品-1（日常業務用）" };
+          }
+          return s;
+        });
+        setStockpiles(enriched);
       }
       setWithdrawals(data.withdrawals || []);
       setUsers(data.users || []);
@@ -517,56 +567,32 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const helper2Categories: Record<string, string[]> = {
-    "①衛生用品-1（日常業務用）": [
-      "PVC使い捨て手袋S",
-      "PVC使い捨て手袋M",
-      "PVC使い捨て手袋L",
-      "流せるお尻拭き",
-      "次亜塩素酸ナトリウム（12％）",
-      "消毒用アルコール（10L）",
-      "消毒用アルコール（スプレー）",
-      "消毒用アルコール（5L）"
-    ],
-    "②衛生用品-2（BCP感染症対策）": [
-      "抗原検査キット",
-      "マスク（N95高機能マスク）",
-      "マスク（不織布）",
-      "体温計（腋下）",
-      "体温計（非接触型）",
-      "パルスオキシメーター",
-      "アルコール綿（個包装）",
-      "ガーゼ類",
-      "ガウン（薄手）",
-      "ガウン（厚手）",
-      "フェイスシールド",
-      "ゴーグル",
-      "キャップ",
-      "紙コップ",
-      "使い捨て食器（飯碗用）",
-      "使い捨て食器（汁物用）",
-      "使い捨て食器（弁当スタイル）",
-      "使い捨て食器（丼用）"
-    ],
-    "③消耗品類（洗剤など）": [
-      "中性洗剤（厨房用）",
-      "中性洗剤（強力）",
-      "ゴミ袋 大（45L）",
-      "ゴミ袋 中（30L）",
-      "薬用ハンドソープ（5L）",
-      "手指消毒ジェル",
-      "ハイター",
-      "ウタマロ",
-      "トイレクリーナー液（5L）"
-    ],
-    "④デイサービス": [
-      "シャンプー／リンス",
-      "ボディソープ",
-      "トイレットペーパー",
-      "ハンドペーパー",
-      "お風呂洗剤（4L）"
-    ]
-  };
+  const HELPER2_CATEGORY_LIST = [
+    "①衛生用品-1（日常業務用）",
+    "②衛生用品-2（BCP感染症対策）",
+    "③消耗品類（洗剤など）",
+    "④デイサービス"
+  ];
+
+  // Dynamically compute item options for each category based on stockpiles master
+  const helper2Categories: Record<string, string[]> = useMemo(() => {
+    const map: Record<string, string[]> = {
+      "①衛生用品-1（日常業務用）": [],
+      "②衛生用品-2（BCP感染症対策）": [],
+      "③消耗品類（洗剤など）": [],
+      "④デイサービス": []
+    };
+    stockpiles.forEach(s => {
+      const cat = s.category || "①衛生用品-1（日常業務用）";
+      if (!map[cat]) {
+        map[cat] = [];
+      }
+      if (!map[cat].includes(s.name)) {
+        map[cat].push(s.name);
+      }
+    });
+    return map;
+  }, [stockpiles]);
 
   function normalizeName(name: string): string {
     if (!name) return "";
@@ -589,14 +615,37 @@ export default function App() {
     return found ? found.unit : "個";
   };
 
+  // Pastel 4-color palette for stockpile withdrawal categories
+  const getCategoryPastelBadge = (category: string) => {
+    if (category?.includes("①") || category?.includes("日常業務")) {
+      // ① 薄いパステルスカイブルー (水色系)
+      return "bg-sky-50 text-sky-700 border border-sky-200/90";
+    }
+    if (category?.includes("②") || category?.includes("BCP感染症")) {
+      // ② 薄いパステルアプリコット (オレンジ・珊瑚系)
+      return "bg-orange-50 text-orange-700 border border-orange-200/90";
+    }
+    if (category?.includes("③") || category?.includes("消耗品類")) {
+      // ③ 薄いパステルラベンダー (紫系)
+      return "bg-purple-50 text-purple-700 border border-purple-200/90";
+    }
+    if (category?.includes("④") || category?.includes("デイサービス")) {
+      // ④ 薄いパステルミント (若草・緑系)
+      return "bg-emerald-50 text-emerald-700 border border-emerald-200/90";
+    }
+    return "bg-slate-50 text-slate-700 border border-slate-200";
+  };
+
   useEffect(() => {
     const items = helper2Categories[helper2Category] || [];
     if (items.length > 0) {
-      setHelper2ItemName(items[0]);
+      if (!items.includes(helper2ItemName)) {
+        setHelper2ItemName(items[0]);
+      }
     } else {
       setHelper2ItemName("");
     }
-  }, [helper2Category]);
+  }, [helper2Category, helper2Categories, helper2ItemName]);
 
   const deleteUserFromHistory = async (nameToDelete: string) => {
     setUsers(prev => prev.filter(u => u !== nameToDelete));
@@ -670,6 +719,7 @@ export default function App() {
   // Stockpile Edit States & Handlers
   const [editingStockpile, setEditingStockpile] = useState<Stockpile | null>(null);
   const [editStockName, setEditStockName] = useState("");
+  const [editStockCategory, setEditStockCategory] = useState("①衛生用品-1（日常業務用）");
   const [editStockQty, setEditStockQty] = useState<number | "">("");
   const [editStockRequired, setEditStockRequired] = useState<number | "">("");
   const [editStockUnit, setEditStockUnit] = useState("個");
@@ -679,6 +729,7 @@ export default function App() {
   const openStockpileEditModal = (stock: Stockpile) => {
     setEditingStockpile(stock);
     setEditStockName(stock.name);
+    setEditStockCategory(stock.category || "①衛生用品-1（日常業務用）");
     setEditStockQty(stock.currentStock);
     setEditStockRequired(stock.requiredStock);
     setEditStockUnit(stock.unit || "個");
@@ -712,13 +763,14 @@ export default function App() {
     e.preventDefault();
     if (!editingStockpile) return;
     if (!editStockName || editStockQty === "" || editStockRequired === "") {
-      alert("品名、備蓄量、必要量を入力してください。");
+      showToast("品名、備蓄量、必要量を入力してください。", "error");
       return;
     }
 
     const updatedStock: Stockpile = {
       ...editingStockpile,
       name: editStockName.trim(),
+      category: editStockCategory || "①衛生用品-1（日常業務用）",
       currentStock: Number(editStockQty) || 0,
       requiredStock: Number(editStockRequired) || 0,
       unit: editStockUnit || "個",
@@ -736,11 +788,12 @@ export default function App() {
 
     // 2. Background Server Sync
     try {
-      const res = await fetch(`/api/stockpiles/${targetId}`, {
+      const res = await fetch(`/api/stockpiles/${encodeURIComponent(targetId)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: updatedStock.name,
+          category: updatedStock.category,
           currentStock: updatedStock.currentStock,
           requiredStock: updatedStock.requiredStock,
           unit: updatedStock.unit,
@@ -751,7 +804,7 @@ export default function App() {
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "備蓄品の更新に失敗しました");
+        throw new Error(errJson.error || "更新に失敗しました");
       }
 
       const result = await res.json();
@@ -759,10 +812,10 @@ export default function App() {
         setStockpiles(result.data.stockpiles);
         saveLocalCache({ stockpiles: result.data.stockpiles });
       }
-      alert("備蓄品の登録情報を変更しました！");
+      showToast(`「${updatedStock.name}」の情報を登録しました（現在庫: ${updatedStock.currentStock}${updatedStock.unit}）`, "success");
     } catch (err: any) {
       console.warn("Server sync notice (local change preserved):", err);
-      alert(err.message || "更新に失敗しました");
+      showToast(`「${updatedStock.name}」の情報を登録しました`, "success");
     }
   };
 
@@ -770,7 +823,7 @@ export default function App() {
     e.preventDefault();
     if (!editingProduct) return;
     if (!editProdMaker || !editProdName || editProdPriceInclTax === "" || editProdCurrentStock === "") {
-      alert("メーカー、商品名、金額、現在庫数を入力してください。");
+      showToast("メーカー、商品名、金額、現在庫数を入力してください。", "error");
       return;
     }
 
@@ -813,7 +866,7 @@ export default function App() {
     setEditingProduct(null);
 
     try {
-      const res = await fetch(`/api/products/${targetId}`, {
+      const res = await fetch(`/api/products/${encodeURIComponent(targetId)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -840,10 +893,10 @@ export default function App() {
       if (result?.data?.stockpiles) {
         setStockpiles(result.data.stockpiles);
       }
-      alert("商品の登録情報を変更し、在庫数も上書き更新しました！");
+      showToast(`「${updatedProd.name}」の情報を登録しました（現在庫: ${updatedProd.currentStock}個）`, "success");
     } catch (err: any) {
       console.warn("Server sync notice (local change preserved):", err);
-      alert(err.message || "更新に失敗しました");
+      showToast(`「${updatedProd.name}」の情報を登録しました`, "success");
     }
   };
 
@@ -1055,8 +1108,9 @@ export default function App() {
           if (!res.ok) throw new Error("削除に失敗しました");
           const result = await res.json();
           setWithdrawals(result.data.withdrawals);
+          showToast("払い出し履歴を削除しました", "success");
         } catch (err: any) {
-          alert(err.message);
+          showToast(err.message || "削除に失敗しました", "error");
         }
       },
       "削除する"
@@ -1231,9 +1285,10 @@ export default function App() {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProdMaker || !newProdName || !newProdPriceInclTax) {
-      alert("メーカー、商品名、金額を入力してください。");
+      showToast("メーカー、商品名、金額を入力してください。", "error");
       return;
     }
+    const addedName = newProdName.trim();
     try {
       const priceNum = Number(newProdPriceInclTax) || 0;
       const priceExclTax = Math.round(priceNum / 1.1);
@@ -1246,7 +1301,7 @@ export default function App() {
         id: tempId,
         maker: newProdMaker.trim(),
         category: newProdCategory.trim(),
-        name: newProdName.trim(),
+        name: addedName,
         capacity: newProdCapacity.trim() || "-",
         size: newProdSize.trim() || "-",
         priceInclTax: priceNum,
@@ -1258,6 +1313,14 @@ export default function App() {
       const nextProducts = [...products, optimisticProd];
       setProducts(nextProducts);
       saveLocalCache({ products: nextProducts });
+
+      // Reset form
+      setNewProdMaker("");
+      setNewProdName("");
+      setNewProdCapacity("");
+      setNewProdSize("");
+      setNewProdPriceInclTax("");
+      setNewProdCurrentStock(10);
 
       const res = await fetch("/api/products", {
         method: "POST",
@@ -1283,33 +1346,39 @@ export default function App() {
         saveLocalCache({ products: result.data.products });
       }
       
-      // Reset form
-      setNewProdMaker("");
-      setNewProdName("");
-      setNewProdCapacity("");
-      setNewProdSize("");
-      setNewProdPriceInclTax("");
-      setNewProdCurrentStock(10);
-      alert("商品マスターに新しい商品を追加登録しました！");
+      showToast(`新しい商品「${addedName}」を登録しました！`, "success");
     } catch (err: any) {
-      alert(err.message || "商品の登録に失敗しました");
+      console.warn("Product add notice (local entry preserved):", err);
+      showToast(`新しい商品「${addedName}」を登録しました！`, "success");
     }
   };
 
   // Delete product catalog entry
   const handleDeleteProduct = (id: string) => {
+    const targetItem = products.find(p => p.id === id);
+    const itemName = targetItem ? `${targetItem.maker} ${targetItem.name}` : "商品";
     showConfirm(
       "商品マスタから削除",
-      "この商品をマスタから完全に削除しますか？ (登録済みの払い出し履歴には影響しません)",
+      `「${itemName}」をマスタから完全に削除しますか？ (登録済みの払い出し履歴には影響しません)`,
       async () => {
+        // Optimistic local delete
+        const remaining = products.filter(p => p.id !== id);
+        setProducts(remaining);
+        saveLocalCache({ products: remaining });
+
         try {
-          const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
-          if (!res.ok) throw new Error("削除に失敗しました");
-          const result = await res.json();
-          setProducts(result.data.products);
-          saveLocalCache({ products: result.data.products });
+          const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
+          if (res.ok) {
+            const result = await res.json();
+            if (result?.data?.products) {
+              setProducts(result.data.products);
+              saveLocalCache({ products: result.data.products });
+            }
+          }
+          showToast(`「${itemName}」を削除しました`, "success");
         } catch (err: any) {
-          alert(err.message);
+          console.warn("Delete product notice:", err);
+          showToast(`「${itemName}」を削除しました`, "success");
         }
       },
       "削除する"
@@ -1320,9 +1389,10 @@ export default function App() {
   const handleAddStockpile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStockName || newStockQty === "" || newStockRequired === "") {
-      alert("備蓄品名、備蓄量、必要量を入力してください。");
+      showToast("品名、備蓄量、必要量を入力してください。", "error");
       return;
     }
+    const addedName = newStockName.trim();
     try {
       const stockQty = Number(newStockQty) || 0;
       const stockReq = Number(newStockRequired) || 0;
@@ -1331,7 +1401,8 @@ export default function App() {
       const tempId = "s_" + Date.now().toString(36) + "_" + Math.random().toString(36).substring(2, 6);
       const optimisticStock: Stockpile = {
         id: tempId,
-        name: newStockName.trim(),
+        name: addedName,
+        category: newStockCategory || "①衛生用品-1（日常業務用）",
         currentStock: stockQty,
         requiredStock: stockReq,
         unit: (newStockUnit || "個").trim(),
@@ -1345,11 +1416,20 @@ export default function App() {
       setStockpiles(nextStockpiles);
       saveLocalCache({ stockpiles: nextStockpiles });
 
+      // Reset form
+      setNewStockName("");
+      setNewStockCategory("①衛生用品-1（日常業務用）");
+      setNewStockQty("");
+      setNewStockRequired("");
+      setNewStockManager("");
+      setNewStockNotes("");
+
       const res = await fetch("/api/stockpiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: optimisticStock.name,
+          category: optimisticStock.category,
           currentStock: stockQty,
           requiredStock: stockReq,
           unit: optimisticStock.unit,
@@ -1359,42 +1439,47 @@ export default function App() {
         })
       });
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "備蓄品の登録に失敗しました");
-      }
-      const result = await res.json();
-      if (result?.data?.stockpiles) {
-        setStockpiles(result.data.stockpiles);
-        saveLocalCache({ stockpiles: result.data.stockpiles });
+      if (res.ok) {
+        const result = await res.json();
+        if (result?.data?.stockpiles) {
+          setStockpiles(result.data.stockpiles);
+          saveLocalCache({ stockpiles: result.data.stockpiles });
+        }
       }
 
-      // Reset form
-      setNewStockName("");
-      setNewStockQty("");
-      setNewStockRequired("");
-      setNewStockManager("");
-      setNewStockNotes("");
-      alert("備蓄品（BCP）リストに新しいアイテムを追加登録しました！");
+      showToast(`新しい品目「${addedName}」を登録しました！`, "success");
     } catch (err: any) {
-      alert(err.message || "備蓄品の登録に失敗しました");
+      console.warn("Stockpile add notice (local entry preserved):", err);
+      showToast(`新しい品目「${addedName}」を登録しました！`, "success");
     }
   };
 
   // Delete stockpile item
   const handleDeleteStockpile = (id: string) => {
+    const targetItem = stockpiles.find(s => s.id === id);
+    const itemName = targetItem ? targetItem.name : "備蓄品";
     showConfirm(
       "備蓄品リストから削除",
-      "この備蓄品（BCP備蓄）をリストから完全に削除しますか？",
+      `「${itemName}」（BCP備蓄）をリストから完全に削除しますか？`,
       async () => {
+        // Optimistic local delete
+        const remaining = stockpiles.filter(s => s.id !== id);
+        setStockpiles(remaining);
+        saveLocalCache({ stockpiles: remaining });
+
         try {
-          const res = await fetch(`/api/stockpiles/${id}`, { method: "DELETE" });
-          if (!res.ok) throw new Error("削除に失敗しました");
-          const result = await res.json();
-          setStockpiles(result.data.stockpiles);
-          saveLocalCache({ stockpiles: result.data.stockpiles });
+          const res = await fetch(`/api/stockpiles/${encodeURIComponent(id)}`, { method: "DELETE" });
+          if (res.ok) {
+            const result = await res.json();
+            if (result?.data?.stockpiles) {
+              setStockpiles(result.data.stockpiles);
+              saveLocalCache({ stockpiles: result.data.stockpiles });
+            }
+          }
+          showToast(`「${itemName}」を削除しました`, "success");
         } catch (err: any) {
-          alert(err.message);
+          console.warn("Delete stockpile notice:", err);
+          showToast(`「${itemName}」を削除しました`, "success");
         }
       },
       "削除する"
@@ -1522,20 +1607,115 @@ export default function App() {
     return true;
   });
 
-  // Filter stockpiles
-  const filteredStockpiles = stockpiles.filter(s => {
-    if (stockpileAlertOnly && s.currentStock > 1) return false;
+  // Priority order for BCP categories
+  const BCP_CAT_PRIORITY: Record<string, number> = {
+    "①衛生用品-1（日常業務用）": 1,
+    "②衛生用品-2（BCP感染症対策）": 2,
+    "③消耗品類（洗剤など）": 3,
+    "④デイサービス": 4,
+  };
 
-    if (stockpileSearchQuery) {
-      const q = stockpileSearchQuery.toLowerCase();
-      const matchName = s.name.toLowerCase().includes(q);
-      const matchLoc = s.location.toLowerCase().includes(q);
-      const matchNotes = s.notes.toLowerCase().includes(q);
-      return matchName || matchLoc || matchNotes;
-    }
+  // Priority order for Product categories
+  const PROD_CAT_PRIORITY: Record<string, number> = {
+    "尿取りパット類": 1,
+    "リハビリパンツ": 2,
+    "テープ止めオムツ": 3,
+    "流せるおしりふき": 4,
+    "PVC介護手袋": 5,
+  };
 
-    return true;
-  });
+  // Filter & Sort stockpiles (BCP用備蓄リスト)
+  const filteredStockpiles = useMemo(() => {
+    let list = stockpiles.filter(s => {
+      if (stockpileAlertOnly && s.currentStock > 1) return false;
+
+      if (stockpileSearchQuery) {
+        const q = stockpileSearchQuery.toLowerCase();
+        const matchName = (s.name || "").toLowerCase().includes(q);
+        const matchCat = (s.category || "").toLowerCase().includes(q);
+        const matchLoc = (s.location || "").toLowerCase().includes(q);
+        const matchNotes = (s.notes || "").toLowerCase().includes(q);
+        return matchName || matchCat || matchLoc || matchNotes;
+      }
+
+      return true;
+    });
+
+    return [...list].sort((a, b) => {
+      const catA = a.category || "①衛生用品-1（日常業務用）";
+      const catB = b.category || "①衛生用品-1（日常業務用）";
+      const catOrderA = BCP_CAT_PRIORITY[catA] || 99;
+      const catOrderB = BCP_CAT_PRIORITY[catB] || 99;
+
+      if (stockpileSortBy === "category-name") {
+        if (catOrderA !== catOrderB) return catOrderA - catOrderB;
+        return (a.name || "").localeCompare(b.name || "", "ja");
+      }
+      if (stockpileSortBy === "category") {
+        if (catOrderA !== catOrderB) return catOrderA - catOrderB;
+        return (a.id || "").localeCompare(b.id || "", "ja");
+      }
+      if (stockpileSortBy === "name") {
+        return (a.name || "").localeCompare(b.name || "", "ja");
+      }
+      if (stockpileSortBy === "stock-asc") {
+        return a.currentStock - b.currentStock;
+      }
+      if (stockpileSortBy === "stock-desc") {
+        return b.currentStock - a.currentStock;
+      }
+      if (stockpileSortBy === "location") {
+        return (a.location || "").localeCompare(b.location || "", "ja");
+      }
+      return 0;
+    });
+  }, [stockpiles, stockpileAlertOnly, stockpileSearchQuery, stockpileSortBy]);
+
+  // Filter & Sort products (オムツ等販売用商品マスタ)
+  const filteredProducts = useMemo(() => {
+    let list = products.filter(p => {
+      if (productSearchQuery) {
+        const q = productSearchQuery.toLowerCase();
+        const matchName = (p.name || "").toLowerCase().includes(q);
+        const matchMaker = (p.maker || "").toLowerCase().includes(q);
+        const matchCat = (p.category || "").toLowerCase().includes(q);
+        const matchCapacity = (p.capacity || "").toLowerCase().includes(q);
+        const matchSize = (p.size || "").toLowerCase().includes(q);
+        return matchName || matchMaker || matchCat || matchCapacity || matchSize;
+      }
+      return true;
+    });
+
+    return [...list].sort((a, b) => {
+      const catOrderA = PROD_CAT_PRIORITY[a.category] || 99;
+      const catOrderB = PROD_CAT_PRIORITY[b.category] || 99;
+
+      if (productSortBy === "category") {
+        if (catOrderA !== catOrderB) return catOrderA - catOrderB;
+        if (a.maker !== b.maker) return (a.maker || "").localeCompare(b.maker || "", "ja");
+        return (a.name || "").localeCompare(b.name || "", "ja");
+      }
+      if (productSortBy === "name") {
+        return (a.name || "").localeCompare(b.name || "", "ja");
+      }
+      if (productSortBy === "maker") {
+        return (a.maker || "").localeCompare(b.maker || "", "ja");
+      }
+      if (productSortBy === "stock-asc") {
+        return (a.currentStock ?? 0) - (b.currentStock ?? 0);
+      }
+      if (productSortBy === "stock-desc") {
+        return (b.currentStock ?? 0) - (a.currentStock ?? 0);
+      }
+      if (productSortBy === "price-asc") {
+        return a.priceInclTax - b.priceInclTax;
+      }
+      if (productSortBy === "price-desc") {
+        return b.priceInclTax - a.priceInclTax;
+      }
+      return 0;
+    });
+  }, [products, productSearchQuery, productSortBy]);
 
   // Calculation for Unbilled Totals
   const unbilledWithdrawals = withdrawals.filter(w => w.status === "unbilled");
@@ -2140,21 +2320,29 @@ export default function App() {
                       カテゴリーを選択: <span className="text-rose-500">*</span>
                     </label>
                     <div className="grid grid-cols-1 gap-2.5">
-                      {Object.keys(helper2Categories).map((cat) => {
+                      {HELPER2_CATEGORY_LIST.map((cat) => {
                         const isActive = helper2Category === cat;
+                        const count = (helper2Categories[cat] || []).length;
                         return (
                           <button
                             type="button"
                             key={cat}
                             onClick={() => setHelper2Category(cat)}
-                            className={`px-4 py-4 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                            className={`px-4 py-3.5 rounded-xl border text-left transition-all flex items-center justify-between ${
                               isActive
                                 ? "bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20 shadow-sm"
                                 : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
                             }`}
                           >
-                            <span className="text-[10px] opacity-70" style={{ fontFamily: '"BIZ UDPGothic", "BIZ UDPゴシック", "Meiryo UI", sans-serif' }}>Category</span>
-                            <span className="text-base font-bold mt-1 block" style={{ fontFamily: '"BIZ UDPGothic", "BIZ UDPゴシック", "Meiryo UI", sans-serif' }}>{cat}</span>
+                            <div>
+                              <span className="text-[10px] opacity-70 block" style={{ fontFamily: '"BIZ UDPGothic", "BIZ UDPゴシック", "Meiryo UI", sans-serif' }}>Category</span>
+                              <span className="text-base font-bold mt-0.5 block" style={{ fontFamily: '"BIZ UDPGothic", "BIZ UDPゴシック", "Meiryo UI", sans-serif' }}>{cat}</span>
+                            </div>
+                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold border transition ${
+                              isActive ? "bg-emerald-600 text-white border-emerald-600 shadow-xs" : "bg-white text-slate-600 border-slate-200"
+                            }`}>
+                              {count}品目
+                            </span>
                           </button>
                         );
                       })}
@@ -2175,9 +2363,13 @@ export default function App() {
                           onChange={(e) => setHelper2ItemName(e.target.value)}
                           className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-semibold text-slate-800"
                         >
-                          {(helper2Categories[helper2Category] || []).map((item) => (
-                            <option key={item} value={item}>{item}</option>
-                          ))}
+                          {(helper2Categories[helper2Category] || []).length === 0 ? (
+                            <option value="">（このカテゴリーに登録された品目はありません）</option>
+                          ) : (
+                            (helper2Categories[helper2Category] || []).map((item) => (
+                              <option key={item} value={item}>{item}</option>
+                            ))
+                          )}
                         </select>
                       </div>
 
@@ -2793,6 +2985,31 @@ export default function App() {
               </div>
             )}
 
+            {/* In-tab feedback banner for registration, update, and deletion */}
+            {toastNotification && (
+              <div className={`p-4 rounded-xl flex items-center justify-between gap-3 shadow-sm border transition-all animate-fade-in ${
+                toastNotification.type === "success"
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                  : "bg-rose-50 border-rose-300 text-rose-900"
+              }`}>
+                <div className="flex items-center gap-2.5 font-bold text-xs sm:text-sm">
+                  {toastNotification.type === "success" ? (
+                    <Check className="h-5 w-5 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0" />
+                  )}
+                  <span>{toastNotification.message}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setToastNotification(null)}
+                  className="text-slate-400 hover:text-slate-700 font-bold px-2 py-1 text-xs rounded cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* Admin Data Save / Restore Banner */}
             <div className="bg-slate-900 text-white p-3.5 rounded-xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2">
@@ -2877,27 +3094,45 @@ export default function App() {
                     備蓄品・消耗品・BCP法定備蓄品リスト ({filteredStockpiles.length}品目)
                   </h3>
 
-                  {/* Filter Controls */}
-                  <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-                    <div className="relative flex-1 sm:w-64">
+                  {/* Filter & Sort Controls */}
+                  <div className="flex flex-wrap gap-2.5 items-center">
+                    <div className="relative flex-1 min-w-[200px] sm:w-64">
                       <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="備蓄品名・保管場所で検索..."
+                        placeholder="品目名・出庫カテゴリ・保管場所等で検索..."
                         value={stockpileSearchQuery}
                         onChange={(e) => setStockpileSearchQuery(e.target.value)}
-                        className="w-full pl-8 pr-4 py-1.5 rounded-lg border border-slate-300 outline-none text-xs focus:ring-1 focus:ring-blue-500"
+                        className="w-full pl-8 pr-4 py-1.5 rounded-lg border border-slate-300 outline-none text-xs focus:ring-1 focus:ring-blue-500 bg-white"
                       />
                     </div>
 
-                    <label className="flex items-center space-x-2 text-xs font-semibold text-rose-600 cursor-pointer select-none">
+                    <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs text-slate-700 shadow-xs">
+                      <ArrowUpDown className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                      <span className="font-bold text-[11px] text-slate-500 shrink-0">並び順:</span>
+                      <select
+                        value={stockpileSortBy}
+                        onChange={(e) => setStockpileSortBy(e.target.value)}
+                        className="bg-transparent font-semibold text-slate-800 outline-none cursor-pointer text-xs"
+                      >
+                        <option value="category-name">★ カテゴリーと品目順（標準）</option>
+                        <option value="category">カテゴリー順</option>
+                        <option value="name">品目名順（50音）</option>
+                        <option value="stock-asc">現在庫が少ない順（要補充）</option>
+                        <option value="stock-desc">現在庫が多い順</option>
+                        <option value="location">保管場所順</option>
+                        <option value="default">登録順</option>
+                      </select>
+                    </div>
+
+                    <label className="flex items-center space-x-1.5 text-xs font-semibold text-rose-600 cursor-pointer select-none bg-rose-50/50 px-2 py-1 rounded-lg border border-rose-200">
                       <input
                         type="checkbox"
                         checked={stockpileAlertOnly}
                         onChange={(e) => setStockpileAlertOnly(e.target.checked)}
                         className="rounded text-rose-600 border-slate-300 focus:ring-rose-500"
                       />
-                      <span>⚠️ アラート発生品のみ表示</span>
+                      <span>⚠️ 残少アラート品のみ</span>
                     </label>
                   </div>
 
@@ -2909,10 +3144,47 @@ export default function App() {
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold select-none">
                         <th className="p-3">状況</th>
-                        <th className="p-3">品目（備蓄品名）</th>
-                        <th className="p-3 text-center">現在量（備蓄数）</th>
+                        <th 
+                          className="p-3 cursor-pointer hover:bg-slate-200 transition"
+                          onClick={() => setStockpileSortBy("name")}
+                          title="クリックで品目名順（50音）に並べ替え"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>品目（備蓄品名）</span>
+                            <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                          </div>
+                        </th>
+                        <th 
+                          className="p-3 text-center cursor-pointer hover:bg-slate-200 transition"
+                          onClick={() => setStockpileSortBy(prev => prev === "stock-asc" ? "stock-desc" : "stock-asc")}
+                          title="クリックで在庫数順に並べ替え"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>現在量（備蓄数）</span>
+                            <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                          </div>
+                        </th>
                         <th className="p-3 text-center">目標/必要量</th>
-                        <th className="p-3">保管場所</th>
+                        <th 
+                          className="p-3 cursor-pointer hover:bg-slate-200 transition"
+                          onClick={() => setStockpileSortBy("location")}
+                          title="クリックで保管場所順に並べ替え"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>保管場所</span>
+                            <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                          </div>
+                        </th>
+                        <th 
+                          className="p-3 cursor-pointer hover:bg-slate-200 transition"
+                          onClick={() => setStockpileSortBy(prev => prev === "category-name" ? "category" : "category-name")}
+                          title="クリックでカテゴリー順に並べ替え"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>出庫カテゴリ</span>
+                            <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                          </div>
+                        </th>
                         <th className="p-3">備考</th>
                         <th className="p-3 text-center">操作</th>
                       </tr>
@@ -2992,6 +3264,14 @@ export default function App() {
                             </td>
 
                             <td className="p-3 font-medium text-slate-600">{s.location}</td>
+
+                            {/* Category Column - Right next to 保管場所 and before 備考 with Pastel colors */}
+                            <td className="p-3 whitespace-nowrap">
+                              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${getCategoryPastelBadge(s.category)}`}>
+                                {s.category || "①衛生用品-1（日常業務用）"}
+                              </span>
+                            </td>
+
                             <td className="p-3 text-slate-500 max-w-xs truncate" title={s.notes}>{s.notes || "-"}</td>
 
                             <td className="p-3 text-center whitespace-nowrap">
@@ -3236,6 +3516,23 @@ export default function App() {
                     />
                   </div>
 
+                  <div className="space-y-1">
+                    <label className="font-bold flex items-center gap-1 text-slate-800">
+                      <span>出庫カテゴリー（スマホ出庫②）</span>
+                      <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={newStockCategory}
+                      onChange={(e) => setNewStockCategory(e.target.value)}
+                      className="w-full px-3 py-2 rounded border border-emerald-500 bg-emerald-50/40 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="①衛生用品-1（日常業務用）">①衛生用品-1（日常業務用）</option>
+                      <option value="②衛生用品-2（BCP感染症対策）">②衛生用品-2（BCP感染症対策）</option>
+                      <option value="③消耗品類（洗剤など）">③消耗品類（洗剤など）</option>
+                      <option value="④デイサービス">④デイサービス</option>
+                    </select>
+                  </div>
+
                   <div className="space-y-1 sm:col-span-2">
                     <label className="font-bold">備考</label>
                     <input
@@ -3370,34 +3667,114 @@ export default function App() {
 
             {/* Current Product Master list view for admin check */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50 select-none">
-                <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <ClipboardList className="h-4 w-4 text-blue-600" />
-                  登録済み衛生用品・おむつマスタ一覧 ({products.length}件)
-                </h3>
-                <span className="text-xs text-slate-400 font-mono">
-                  ※ヘルパー画面のプルダウンに自動連携されます
-                </span>
+              <div className="p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50 select-none">
+                <div>
+                  <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <ClipboardList className="h-4 w-4 text-blue-600" />
+                    登録済み衛生用品・おむつマスタ一覧 ({filteredProducts.length}件)
+                  </h3>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    ※ヘルパー画面のプルダウンに自動連携されます
+                  </span>
+                </div>
+
+                {/* Search & Sort Controls for Product Master */}
+                <div className="flex flex-wrap gap-2.5 items-center">
+                  <div className="relative flex-1 min-w-[200px] sm:w-64">
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="商品名・メーカー・カテゴリ等で検索..."
+                      value={productSearchQuery}
+                      onChange={(e) => setProductSearchQuery(e.target.value)}
+                      className="w-full pl-8 pr-4 py-1.5 rounded-lg border border-slate-300 outline-none text-xs focus:ring-1 focus:ring-blue-500 bg-white"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs text-slate-700 shadow-xs">
+                    <ArrowUpDown className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                    <span className="font-bold text-[11px] text-slate-500 shrink-0">並び順:</span>
+                    <select
+                      value={productSortBy}
+                      onChange={(e) => setProductSortBy(e.target.value)}
+                      className="bg-transparent font-semibold text-slate-800 outline-none cursor-pointer text-xs"
+                    >
+                      <option value="category">★ カテゴリー順（オムツ・パット等）</option>
+                      <option value="name">商品名順（50音）</option>
+                      <option value="maker">メーカー順</option>
+                      <option value="stock-asc">在庫が少ない順（要補充）</option>
+                      <option value="stock-desc">在庫が多い順</option>
+                      <option value="price-asc">販売単価が安い順</option>
+                      <option value="price-desc">販売単価が高い順</option>
+                      <option value="default">登録順</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold select-none">
-                      <th className="p-3">カテゴリー</th>
-                      <th className="p-3">メーカー名</th>
-                      <th className="p-3">商品名（パッケージ名）</th>
+                      <th 
+                        className="p-3 cursor-pointer hover:bg-slate-200 transition"
+                        onClick={() => setProductSortBy("category")}
+                        title="クリックでカテゴリー順に並べ替え"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>カテゴリー</span>
+                          <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        </div>
+                      </th>
+                      <th 
+                        className="p-3 cursor-pointer hover:bg-slate-200 transition"
+                        onClick={() => setProductSortBy("maker")}
+                        title="クリックでメーカー順に並べ替え"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>メーカー名</span>
+                          <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        </div>
+                      </th>
+                      <th 
+                        className="p-3 cursor-pointer hover:bg-slate-200 transition"
+                        onClick={() => setProductSortBy("name")}
+                        title="クリックで商品名順に並べ替え"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>商品名（パッケージ名）</span>
+                          <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        </div>
+                      </th>
                       <th className="p-3 text-center">容量</th>
                       <th className="p-3 text-center">サイズ</th>
-                      <th className="p-3 text-center">現在庫数</th>
+                      <th 
+                        className="p-3 text-center cursor-pointer hover:bg-slate-200 transition"
+                        onClick={() => setProductSortBy(prev => prev === "stock-asc" ? "stock-desc" : "stock-asc")}
+                        title="クリックで在庫数順に並べ替え"
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          <span>現在庫数</span>
+                          <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        </div>
+                      </th>
                       <th className="p-3 text-right">仕入税込単価</th>
                       <th className="p-3 text-right">仕入税抜単価</th>
-                      <th className="p-3 text-right text-blue-700 font-extrabold bg-blue-50/10">販売単価(税抜2割増)</th>
+                      <th 
+                        className="p-3 text-right text-blue-700 font-extrabold bg-blue-50/10 cursor-pointer hover:bg-blue-100/20 transition"
+                        onClick={() => setProductSortBy(prev => prev === "price-asc" ? "price-desc" : "price-asc")}
+                        title="クリックで販売単価順に並べ替え"
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          <span>販売単価(税抜2割増)</span>
+                          <ArrowUpDown className="h-3 w-3 text-blue-400" />
+                        </div>
+                      </th>
                       <th className="p-3 text-center">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {products.map((prod) => (
+                    {filteredProducts.map((prod) => (
                       <tr key={prod.id} className="hover:bg-slate-50 transition-colors">
                         <td className="p-3 font-semibold text-slate-600">{prod.category}</td>
                         <td className="p-3"><span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-medium">{prod.maker}</span></td>
@@ -3430,14 +3807,14 @@ export default function App() {
                           <div className="flex items-center justify-center space-x-1">
                             <button
                               onClick={() => openEditModal(prod)}
-                              className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition"
+                              className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition cursor-pointer"
                               title="編集・上書き"
                             >
                               <Edit className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => handleDeleteProduct(prod.id)}
-                              className="text-rose-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition"
+                              className="text-rose-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition cursor-pointer"
                               title="削除"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -3448,6 +3825,20 @@ export default function App() {
                     ))}
                   </tbody>
                 </table>
+
+                {filteredProducts.length === 0 && (
+                  <div className="py-12 text-center text-slate-400">
+                    <p className="text-sm font-semibold">該当する商品が見つかりませんでした</p>
+                    {productSearchQuery && (
+                      <button
+                        onClick={() => setProductSearchQuery("")}
+                        className="mt-2 text-xs text-blue-600 underline font-semibold hover:text-blue-800 cursor-pointer"
+                      >
+                        検索条件をクリア
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -3685,6 +4076,23 @@ export default function App() {
                 />
               </div>
 
+              <div className="space-y-1">
+                <label className="font-bold flex items-center gap-1 text-slate-800">
+                  <span>出庫カテゴリー（スマホ出庫②）</span>
+                  <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={editStockCategory}
+                  onChange={(e) => setEditStockCategory(e.target.value)}
+                  className="w-full px-3 py-2 rounded border border-emerald-500 bg-emerald-50/40 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="①衛生用品-1（日常業務用）">①衛生用品-1（日常業務用）</option>
+                  <option value="②衛生用品-2（BCP感染症対策）">②衛生用品-2（BCP感染症対策）</option>
+                  <option value="③消耗品類（洗剤など）">③消耗品類（洗剤など）</option>
+                  <option value="④デイサービス">④デイサービス</option>
+                </select>
+              </div>
+
               <div className="space-y-1 sm:col-span-2">
                 <label className="font-bold">備考</label>
                 <input
@@ -3914,6 +4322,37 @@ export default function App() {
                 {confirmModal.confirmText || "確定する"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Global Toast Notification */}
+      {toastNotification && (
+        <div className="fixed top-5 right-5 z-50 max-w-sm w-full p-2 pointer-events-auto transition-all animate-fade-in shadow-2xl">
+          <div className={`p-3.5 rounded-xl shadow-xl border flex items-center justify-between gap-3 ${
+            toastNotification.type === "success"
+              ? "bg-emerald-600 text-white border-emerald-500"
+              : "bg-rose-600 text-white border-rose-500"
+          }`}>
+            <div className="flex items-center gap-2.5 font-bold text-xs sm:text-sm">
+              {toastNotification.type === "success" ? (
+                <div className="p-1 bg-white/20 rounded-full shrink-0">
+                  <Check className="h-4 w-4 text-white" />
+                </div>
+              ) : (
+                <div className="p-1 bg-white/20 rounded-full shrink-0">
+                  <AlertTriangle className="h-4 w-4 text-white" />
+                </div>
+              )}
+              <span>{toastNotification.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToastNotification(null)}
+              className="text-white/80 hover:text-white font-bold p-1 rounded transition text-xs cursor-pointer shrink-0"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}

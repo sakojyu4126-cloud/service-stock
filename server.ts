@@ -94,52 +94,52 @@ const initialProducts = [
 
 const initialStockpiles = [
   // Category ①衛生用品-1（日常業務用）
-  { id: "s1", name: "PVC使い捨て手袋S", currentStock: 10, requiredStock: 10, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーS", alertDismissed: false },
-  { id: "s2", name: "PVC使い捨て手袋M", currentStock: 40, requiredStock: 40, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーM", alertDismissed: false },
-  { id: "s3", name: "PVC使い捨て手袋L", currentStock: 15, requiredStock: 15, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーL", alertDismissed: false },
-  { id: "s4", name: "流せるお尻拭き", currentStock: 20, requiredStock: 20, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "日常業務用おしりふき", alertDismissed: false },
-  { id: "s5", name: "次亜塩素酸ナトリウム（12％）", currentStock: 3, requiredStock: 3, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "消毒・除菌剤", alertDismissed: false },
-  { id: "s6", name: "消毒用アルコール（10L）", currentStock: 5, requiredStock: 5, unit: "箱", location: "5番館倉庫", manager: "事務員", notes: "大容量10L", alertDismissed: false },
-  { id: "s7", name: "消毒用アルコール（スプレー）", currentStock: 15, requiredStock: 15, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "各フロア設置用", alertDismissed: false },
-  { id: "s8", name: "消毒用アルコール（5L）", currentStock: 5, requiredStock: 5, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "大容量5L", alertDismissed: false },
+  { id: "s1", name: "PVC使い捨て手袋S", category: "①衛生用品-1（日常業務用）", currentStock: 10, requiredStock: 10, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーS", alertDismissed: false },
+  { id: "s2", name: "PVC使い捨て手袋M", category: "①衛生用品-1（日常業務用）", currentStock: 40, requiredStock: 40, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーM", alertDismissed: false },
+  { id: "s3", name: "PVC使い捨て手袋L", category: "①衛生用品-1（日常業務用）", currentStock: 15, requiredStock: 15, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "パウダーフリーL", alertDismissed: false },
+  { id: "s4", name: "流せるお尻拭き", category: "①衛生用品-1（日常業務用）", currentStock: 20, requiredStock: 20, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "日常業務用おしりふき", alertDismissed: false },
+  { id: "s5", name: "次亜塩素酸ナトリウム（12％）", category: "①衛生用品-1（日常業務用）", currentStock: 3, requiredStock: 3, unit: "箱", location: "5番館倉庫", manager: "衛生担当", notes: "消毒・除菌剤", alertDismissed: false },
+  { id: "s6", name: "消毒用アルコール（10L）", category: "①衛生用品-1（日常業務用）", currentStock: 5, requiredStock: 5, unit: "箱", location: "5番館倉庫", manager: "事務員", notes: "大容量10L", alertDismissed: false },
+  { id: "s7", name: "消毒用アルコール（スプレー）", category: "①衛生用品-1（日常業務用）", currentStock: 15, requiredStock: 15, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "各フロア設置用", alertDismissed: false },
+  { id: "s8", name: "消毒用アルコール（5L）", category: "①衛生用品-1（日常業務用）", currentStock: 5, requiredStock: 5, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "大容量5L", alertDismissed: false },
 
   // Category ②衛生用品-2（BCP感染症対策）
-  { id: "s9", name: "抗原検査キット", currentStock: 100, requiredStock: 100, unit: "キット", location: "5番館倉庫", manager: "管理職", notes: "コロナ・インフル両方対応", alertDismissed: false },
-  { id: "s10", name: "マスク（N95高機能マスク）", currentStock: 200, requiredStock: 200, unit: "枚", location: "5番館倉庫", manager: "管理職", notes: "医療・感染用", alertDismissed: false },
-  { id: "s11", name: "マスク（不織布）", currentStock: 500, requiredStock: 500, unit: "枚", location: "5番館倉庫", manager: "事務員", notes: "日常業務・来客用", alertDismissed: false },
-  { id: "s12", name: "体温計（腋下）", currentStock: 10, requiredStock: 10, unit: "本", location: "桃の郷事務所", manager: "看護スタッフ", notes: "接触型通常タイプ", alertDismissed: false },
-  { id: "s13", name: "体温計（非接触型）", currentStock: 5, requiredStock: 5, unit: "本", location: "桃の郷事務所", manager: "看護スタッフ", notes: "検温用", alertDismissed: false },
-  { id: "s14", name: "パルスオキシメーター", currentStock: 5, requiredStock: 5, unit: "個", location: "桃の郷事務所", manager: "看護スタッフ", notes: "SpO2測定用", alertDismissed: false },
-  { id: "s15", name: "アルコール綿（個包装）", currentStock: 1000, requiredStock: 1000, unit: "個", location: "5番館倉庫", manager: "看護スタッフ", notes: "個包装（2枚入）", alertDismissed: false },
-  { id: "s16", name: "ガーゼ類", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "看護スタッフ", notes: "滅菌ガーゼ", alertDismissed: false },
-  { id: "s17", name: "ガウン（薄手）", currentStock: 200, requiredStock: 200, unit: "枚", location: "5番館倉庫", manager: "衛生担当", notes: "不織布簡易ガウン", alertDismissed: false },
-  { id: "s18", name: "ガウン（厚手）", currentStock: 100, requiredStock: 100, unit: "枚", location: "5番館倉庫", manager: "衛生担当", notes: "撥水フルプロテクション", alertDismissed: false },
-  { id: "s19", name: "フェイスシールド", currentStock: 80, requiredStock: 80, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "感染防止シールド", alertDismissed: false },
-  { id: "s20", name: "ゴーグル", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "保護メガネ", alertDismissed: false },
-  { id: "s21", name: "キャップ", currentStock: 200, requiredStock: 200, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "ヘアカバー", alertDismissed: false },
-  { id: "s22", name: "紙コップ", currentStock: 200, requiredStock: 200, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害・来客用", alertDismissed: false },
-  { id: "s23", name: "使い捨て食器（飯碗用）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 飯碗", alertDismissed: false },
-  { id: "s24", name: "使い捨て食器（汁物用）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 汁物", alertDismissed: false },
-  { id: "s25", name: "使い捨て食器（弁当スタイル）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 弁当", alertDismissed: false },
-  { id: "s26", name: "使い捨て食器（丼用）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 丼", alertDismissed: false },
+  { id: "s9", name: "抗原検査キット", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "キット", location: "5番館倉庫", manager: "管理職", notes: "コロナ・インフル両方対応", alertDismissed: false },
+  { id: "s10", name: "マスク（N95高機能マスク）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 200, requiredStock: 200, unit: "枚", location: "5番館倉庫", manager: "管理職", notes: "医療・感染用", alertDismissed: false },
+  { id: "s11", name: "マスク（不織布）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 500, requiredStock: 500, unit: "枚", location: "5番館倉庫", manager: "事務員", notes: "日常業務・来客用", alertDismissed: false },
+  { id: "s12", name: "体温計（腋下）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 10, requiredStock: 10, unit: "本", location: "桃の郷事務所", manager: "看護スタッフ", notes: "接触型通常タイプ", alertDismissed: false },
+  { id: "s13", name: "体温計（非接触型）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 5, requiredStock: 5, unit: "本", location: "桃の郷事務所", manager: "看護スタッフ", notes: "検温用", alertDismissed: false },
+  { id: "s14", name: "パルスオキシメーター", category: "②衛生用品-2（BCP感染症対策）", currentStock: 5, requiredStock: 5, unit: "個", location: "桃の郷事務所", manager: "看護スタッフ", notes: "SpO2測定用", alertDismissed: false },
+  { id: "s15", name: "アルコール綿（個包装）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 1000, requiredStock: 1000, unit: "個", location: "5番館倉庫", manager: "看護スタッフ", notes: "個包装（2枚入）", alertDismissed: false },
+  { id: "s16", name: "ガーゼ類", category: "②衛生用品-2（BCP感染症対策）", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "看護スタッフ", notes: "滅菌ガーゼ", alertDismissed: false },
+  { id: "s17", name: "ガウン（薄手）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 200, requiredStock: 200, unit: "枚", location: "5番館倉庫", manager: "衛生担当", notes: "不織布簡易ガウン", alertDismissed: false },
+  { id: "s18", name: "ガウン（厚手）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "枚", location: "5番館倉庫", manager: "衛生担当", notes: "撥水フルプロテクション", alertDismissed: false },
+  { id: "s19", name: "フェイスシールド", category: "②衛生用品-2（BCP感染症対策）", currentStock: 80, requiredStock: 80, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "感染防止シールド", alertDismissed: false },
+  { id: "s20", name: "ゴーグル", category: "②衛生用品-2（BCP感染症対策）", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "保護メガネ", alertDismissed: false },
+  { id: "s21", name: "キャップ", category: "②衛生用品-2（BCP感染症対策）", currentStock: 200, requiredStock: 200, unit: "個", location: "5番館倉庫", manager: "衛生担当", notes: "ヘアカバー", alertDismissed: false },
+  { id: "s22", name: "紙コップ", category: "②衛生用品-2（BCP感染症対策）", currentStock: 200, requiredStock: 200, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害・来客用", alertDismissed: false },
+  { id: "s23", name: "使い捨て食器（飯碗用）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 飯碗", alertDismissed: false },
+  { id: "s24", name: "使い捨て食器（汁物用）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 汁物", alertDismissed: false },
+  { id: "s25", name: "使い捨て食器（弁当スタイル）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 弁当", alertDismissed: false },
+  { id: "s26", name: "使い捨て食器（丼用）", category: "②衛生用品-2（BCP感染症対策）", currentStock: 100, requiredStock: 100, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "非常災害時用 丼", alertDismissed: false },
 
-  // Category ③消耗品類（ハンドペーパー等）
-  { id: "s27", name: "中性洗剤（厨房用）", currentStock: 2, requiredStock: 2, unit: "箱", location: "5番館倉庫", manager: "事務員", notes: "厨房業務用", alertDismissed: false },
-  { id: "s28", name: "中性洗剤（強力）", currentStock: 5, requiredStock: 5, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "頑固な汚れ落とし用", alertDismissed: false },
-  { id: "s29", name: "ゴミ袋 大（45L）", currentStock: 50, requiredStock: 50, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "業務用45L", alertDismissed: false },
-  { id: "s30", name: "ゴミ袋 中（30L）", currentStock: 50, requiredStock: 50, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "業務用30L", alertDismissed: false },
-  { id: "s31", name: "薬用ハンドソープ（5L）", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "手洗い場詰替え用", alertDismissed: false },
-  { id: "s32", name: "手指消毒ジェル", currentStock: 20, requiredStock: 20, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "携帯・卓上用", alertDismissed: false },
-  { id: "s33", name: "ハイター", currentStock: 5, requiredStock: 5, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "漂白・除菌用", alertDismissed: false },
-  { id: "s34", name: "ウタマロ", currentStock: 5, requiredStock: 5, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "部分汚れ用", alertDismissed: false },
-  { id: "s35", name: "トイレクリーナー液（5L）", currentStock: 3, requiredStock: 3, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "トイレ清掃用", alertDismissed: false },
+  // Category ③消耗品類（洗剤など）
+  { id: "s27", name: "中性洗剤（厨房用）", category: "③消耗品類（洗剤など）", currentStock: 2, requiredStock: 2, unit: "箱", location: "5番館倉庫", manager: "事務員", notes: "厨房業務用", alertDismissed: false },
+  { id: "s28", name: "中性洗剤（強力）", category: "③消耗品類（洗剤など）", currentStock: 5, requiredStock: 5, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "頑固な汚れ落とし用", alertDismissed: false },
+  { id: "s29", name: "ゴミ袋 大（45L）", category: "③消耗品類（洗剤など）", currentStock: 50, requiredStock: 50, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "業務用45L", alertDismissed: false },
+  { id: "s30", name: "ゴミ袋 中（30L）", category: "③消耗品類（洗剤など）", currentStock: 50, requiredStock: 50, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "業務用30L", alertDismissed: false },
+  { id: "s31", name: "薬用ハンドソープ（5L）", category: "③消耗品類（洗剤など）", currentStock: 10, requiredStock: 10, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "手洗い場詰替え用", alertDismissed: false },
+  { id: "s32", name: "手指消毒ジェル", category: "③消耗品類（洗剤など）", currentStock: 20, requiredStock: 20, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "携帯・卓上用", alertDismissed: false },
+  { id: "s33", name: "ハイター", category: "③消耗品類（洗剤など）", currentStock: 5, requiredStock: 5, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "漂白・除菌用", alertDismissed: false },
+  { id: "s34", name: "ウタマロ", category: "③消耗品類（洗剤など）", currentStock: 5, requiredStock: 5, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "部分汚れ用", alertDismissed: false },
+  { id: "s35", name: "トイレクリーナー液（5L）", category: "③消耗品類（洗剤など）", currentStock: 3, requiredStock: 3, unit: "本", location: "5番館倉庫", manager: "事務員", notes: "トイレ清掃用", alertDismissed: false },
 
   // Category ④デイサービス
-  { id: "s36", name: "シャンプー／リンス", currentStock: 5, requiredStock: 5, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "利用者お風呂用", alertDismissed: false },
-  { id: "s37", name: "ボディソープ", currentStock: 5, requiredStock: 5, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "利用者お風呂用", alertDismissed: false },
-  { id: "s38", name: "トイレットペーパー", currentStock: 120, requiredStock: 120, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "消耗品", alertDismissed: false },
-  { id: "s39", name: "ハンドペーパー", currentStock: 250, requiredStock: 250, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "ペーパータオル", alertDismissed: false },
-  { id: "s40", name: "お風呂洗剤（4L）", currentStock: 3, requiredStock: 3, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "お風呂清掃用", alertDismissed: false }
+  { id: "s36", name: "シャンプー／リンス", category: "④デイサービス", currentStock: 5, requiredStock: 5, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "利用者お風呂用", alertDismissed: false },
+  { id: "s37", name: "ボディソープ", category: "④デイサービス", currentStock: 5, requiredStock: 5, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "利用者お風呂用", alertDismissed: false },
+  { id: "s38", name: "トイレットペーパー", category: "④デイサービス", currentStock: 120, requiredStock: 120, unit: "個", location: "5番館倉庫", manager: "事務員", notes: "消耗品", alertDismissed: false },
+  { id: "s39", name: "ハンドペーパー", category: "④デイサービス", currentStock: 250, requiredStock: 250, unit: "袋", location: "5番館倉庫", manager: "事務員", notes: "ペーパータオル", alertDismissed: false },
+  { id: "s40", name: "お風呂洗剤（4L）", category: "④デイサービス", currentStock: 3, requiredStock: 3, unit: "本", location: "デイサービス浴室", manager: "介護スタッフ", notes: "お風呂清掃用", alertDismissed: false }
 ];
 
 const initialWithdrawals = [
@@ -204,11 +204,17 @@ async function readDatabase() {
       parsed.products = JSON.parse(JSON.stringify(initialProducts));
       modified = true;
     } else {
-      // Ensure all 14 standard products exist
+      const deletedProdSet = new Set((parsed.deletedProducts || []).map((n: string) => normalizeName(n)));
+      const deletedProdIdsSet = new Set(parsed.deletedProductIds || []);
+      // Ensure standard products exist (skipping any intentionally deleted by user)
       for (const p of initialProducts) {
+        const normName = normalizeName(p.name);
+        if (deletedProdSet.has(normName) || deletedProdIdsSet.has(p.id)) {
+          continue;
+        }
         const exists = parsed.products.some((existing: any) => 
           existing.id === p.id || 
-          (normalizeName(existing.name) === normalizeName(p.name) && existing.category === p.category)
+          (normalizeName(existing.name) === normName && existing.category === p.category)
         );
         if (!exists) {
           parsed.products.push({ ...p });
@@ -292,8 +298,14 @@ async function readDatabase() {
     }
 
     // Automatically migrate and inject any missing standard stockpile items
+    // (skipping any intentionally deleted by user)
+    const deletedStockSet = new Set((parsed.deletedStockpiles || []).map((n: string) => normalizeName(n)));
+    const deletedStockIdsSet = new Set(parsed.deletedStockpileIds || []);
     for (const bcp of initialStockpiles) {
       const normNew = normalizeName(bcp.name);
+      if (deletedStockSet.has(normNew) || deletedStockIdsSet.has(bcp.id)) {
+        continue;
+      }
       const exists = parsed.stockpiles.some((s: any) => normalizeName(s.name) === normNew);
       if (!exists) {
         parsed.stockpiles.push({ ...bcp });
@@ -301,11 +313,16 @@ async function readDatabase() {
       }
     }
 
-    // Ensure all stockpile items have a unique ID, preserving existing stable IDs
+    // Ensure all stockpile items have a unique ID, category, and valid stock
     if (parsed.stockpiles) {
       parsed.stockpiles.forEach((s: any, i: number) => {
         if (!s.id) {
           s.id = `s${i + 1}`;
+          modified = true;
+        }
+        if (!s.category) {
+          const orig = initialStockpiles.find(is => is.id === s.id || normalizeName(is.name) === normalizeName(s.name));
+          s.category = orig?.category || "①衛生用品-1（日常業務用）";
           modified = true;
         }
         if (typeof s.currentStock !== "number" || isNaN(s.currentStock) || s.currentStock < 0) {
@@ -488,7 +505,11 @@ app.post("/api/backup/restore-master", async (req, res) => {
       withdrawals: current.withdrawals || [],
       users: current.users && current.users.length > 0 ? current.users : [...initialUsers],
       staff: current.staff && current.staff.length > 0 ? current.staff : [...initialStaff],
-      staffWithdrawals: current.staffWithdrawals || []
+      staffWithdrawals: current.staffWithdrawals || [],
+      deletedProducts: [],
+      deletedProductIds: [],
+      deletedStockpiles: [],
+      deletedStockpileIds: []
     };
     await writeDatabase(masterDb);
     res.json({
@@ -777,10 +798,29 @@ app.put("/api/products/:id", async (req, res) => {
 app.delete("/api/products/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const decodedId = decodeURIComponent(id);
     const db = await readDatabase();
-    db.products = db.products.filter((p: any) => p.id !== id);
+    if (!db.deletedProducts) db.deletedProducts = [];
+    if (!db.deletedProductIds) db.deletedProductIds = [];
+
+    const target = db.products.find((p: any) => 
+      p.id === id || 
+      p.id === decodedId || 
+      normalizeName(p.name) === normalizeName(id) || 
+      normalizeName(p.name) === normalizeName(decodedId)
+    );
+    if (target) {
+      db.deletedProducts.push(normalizeName(target.name));
+      db.deletedProductIds.push(target.id);
+      db.products = db.products.filter((p: any) => p.id !== target.id);
+    } else {
+      db.deletedProductIds.push(id);
+      db.deletedProductIds.push(decodedId);
+      db.products = db.products.filter((p: any) => p.id !== id && p.id !== decodedId);
+    }
+
     await writeDatabase(db);
-    res.json({ message: "Product deleted", data: db });
+    res.json({ message: "削除しました", data: db });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -789,7 +829,7 @@ app.delete("/api/products/:id", async (req, res) => {
 // Stockpiles API
 app.post("/api/stockpiles", async (req, res) => {
   try {
-    const { name, currentStock, requiredStock, unit, location, manager, notes } = req.body;
+    const { name, currentStock, requiredStock, unit, location, manager, notes, category } = req.body;
     const cleanName = (name || "").trim();
     if (!cleanName) {
       return res.status(400).json({ error: "品目（備蓄品名）を入力してください。" });
@@ -797,6 +837,7 @@ app.post("/api/stockpiles", async (req, res) => {
 
     const db = await readDatabase();
     const cleanLocation = (location || "5番館倉庫").trim();
+    const cleanCategory = (category || "①衛生用品-1（日常業務用）").trim();
     const stockQty = Math.max(0, Number(currentStock) || 0);
     const reqQty = Math.max(0, Number(requiredStock) || 0);
 
@@ -812,6 +853,7 @@ app.post("/api/stockpiles", async (req, res) => {
       if (reqQty > 0) {
         db.stockpiles[existingIndex].requiredStock = reqQty;
       }
+      if (category) db.stockpiles[existingIndex].category = cleanCategory;
       if (manager) db.stockpiles[existingIndex].manager = String(manager).trim();
       if (notes) db.stockpiles[existingIndex].notes = String(notes).trim();
       if (unit) db.stockpiles[existingIndex].unit = String(unit).trim();
@@ -827,6 +869,7 @@ app.post("/api/stockpiles", async (req, res) => {
     const newStock = {
       id: "s_" + Date.now().toString(36) + "_" + Math.random().toString(36).substring(2, 7),
       name: cleanName,
+      category: cleanCategory,
       currentStock: stockQty,
       requiredStock: reqQty,
       unit: (unit || "個").trim(),
@@ -847,9 +890,10 @@ app.post("/api/stockpiles", async (req, res) => {
 app.put("/api/stockpiles/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { currentStock, requiredStock, alertDismissed, name, unit, location, manager, notes } = req.body;
+    const decodedId = decodeURIComponent(id);
+    const { currentStock, requiredStock, alertDismissed, name, unit, location, manager, notes, category } = req.body;
     const db = await readDatabase();
-    let idx = db.stockpiles.findIndex((s: any) => s.id === id);
+    let idx = db.stockpiles.findIndex((s: any) => s.id === id || s.id === decodedId);
 
     // Fallback: search by name match if ID wasn't found directly
     if (idx === -1 && name) {
@@ -866,6 +910,7 @@ app.put("/api/stockpiles/:id", async (req, res) => {
       if (requiredStock !== undefined) db.stockpiles[idx].requiredStock = Math.max(0, Number(requiredStock) || 0);
       if (alertDismissed !== undefined) db.stockpiles[idx].alertDismissed = Boolean(alertDismissed);
       if (name !== undefined) db.stockpiles[idx].name = String(name).trim();
+      if (category !== undefined) db.stockpiles[idx].category = String(category).trim();
       if (unit !== undefined) db.stockpiles[idx].unit = String(unit).trim();
       if (location !== undefined) db.stockpiles[idx].location = String(location).trim();
       if (manager !== undefined) db.stockpiles[idx].manager = String(manager).trim();
@@ -879,6 +924,7 @@ app.put("/api/stockpiles/:id", async (req, res) => {
     const newStock = {
       id: id || ("s_" + Date.now().toString(36)),
       name: (name || "備蓄品").trim(),
+      category: (category || "①衛生用品-1（日常業務用）").trim(),
       currentStock: Math.max(0, Number(currentStock) || 0),
       requiredStock: Math.max(0, Number(requiredStock) || 0),
       unit: (unit || "個").trim(),
@@ -898,10 +944,29 @@ app.put("/api/stockpiles/:id", async (req, res) => {
 app.delete("/api/stockpiles/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const decodedId = decodeURIComponent(id);
     const db = await readDatabase();
-    db.stockpiles = db.stockpiles.filter((s: any) => s.id !== id);
+    if (!db.deletedStockpiles) db.deletedStockpiles = [];
+    if (!db.deletedStockpileIds) db.deletedStockpileIds = [];
+
+    const target = db.stockpiles.find((s: any) => 
+      s.id === id || 
+      s.id === decodedId || 
+      normalizeName(s.name) === normalizeName(id) || 
+      normalizeName(s.name) === normalizeName(decodedId)
+    );
+    if (target) {
+      db.deletedStockpiles.push(normalizeName(target.name));
+      db.deletedStockpileIds.push(target.id);
+      db.stockpiles = db.stockpiles.filter((s: any) => s.id !== target.id);
+    } else {
+      db.deletedStockpileIds.push(id);
+      db.deletedStockpileIds.push(decodedId);
+      db.stockpiles = db.stockpiles.filter((s: any) => s.id !== id && s.id !== decodedId);
+    }
+
     await writeDatabase(db);
-    res.json({ message: "Stockpile item deleted", data: db });
+    res.json({ message: "削除しました", data: db });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
