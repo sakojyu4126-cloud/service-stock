@@ -1,8 +1,8 @@
 {
-  "savedAt": "2026-10-05T00:34:10.469Z",
-  "savedBy": "管理者",
-  "productsCount": 14,
-  "stockpilesCount": 40,
+  "savedAt": "2026-10-07T01:15:56.009Z",
+  "savedBy": "テスト管理者",
+  "productsCount": 15,
+  "stockpilesCount": 39,
   "withdrawalsCount": 4,
   "data": {
     "products": [
@@ -173,20 +173,21 @@
         "priceExclTax": 935,
         "sellingPrice": 1123,
         "currentStock": 1
+      },
+      {
+        "id": "p_muwkzpet_80w5n",
+        "maker": "アスクル",
+        "category": "テープ止めオムツ",
+        "name": "テープ止め　アスクル20枚",
+        "capacity": "20",
+        "size": "M",
+        "priceInclTax": 1000,
+        "priceExclTax": 909,
+        "sellingPrice": 1091,
+        "currentStock": 4
       }
     ],
     "stockpiles": [
-      {
-        "id": "s1",
-        "name": "PVC使い捨て手袋S",
-        "currentStock": 10,
-        "requiredStock": 10,
-        "unit": "箱",
-        "location": "5番館倉庫",
-        "manager": "衛生担当",
-        "notes": "パウダーフリーS",
-        "alertDismissed": false
-      },
       {
         "id": "s2",
         "name": "PVC使い捨て手袋M",
@@ -196,7 +197,8 @@
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "パウダーフリーM",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "①衛生用品-1（日常業務用）"
       },
       {
         "id": "s3",
@@ -207,7 +209,8 @@
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "パウダーフリーL",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "①衛生用品-1（日常業務用）"
       },
       {
         "id": "s4",
@@ -217,8 +220,9 @@
         "unit": "袋",
         "location": "5番館倉庫",
         "manager": "事務員",
-        "notes": "日常業務用おしりふき",
-        "alertDismissed": false
+        "notes": "BCP用おしりふき",
+        "alertDismissed": false,
+        "category": "①衛生用品-1（日常業務用）"
       },
       {
         "id": "s5",
@@ -229,7 +233,8 @@
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "消毒・除菌剤",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "①衛生用品-1（日常業務用）"
       },
       {
         "id": "s6",
@@ -240,7 +245,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "大容量10L",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "①衛生用品-1（日常業務用）"
       },
       {
         "id": "s7",
@@ -251,7 +257,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "各フロア設置用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "①衛生用品-1（日常業務用）"
       },
       {
         "id": "s8",
@@ -262,7 +269,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "大容量5L",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "①衛生用品-1（日常業務用）"
       },
       {
         "id": "s9",
@@ -273,7 +281,8 @@
         "location": "5番館倉庫",
         "manager": "管理職",
         "notes": "コロナ・インフル両方対応",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s10",
@@ -284,7 +293,8 @@
         "location": "5番館倉庫",
         "manager": "管理職",
         "notes": "医療・感染用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s11",
@@ -295,7 +305,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "日常業務・来客用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s12",
@@ -306,7 +317,8 @@
         "location": "桃の郷事務所",
         "manager": "看護スタッフ",
         "notes": "接触型通常タイプ",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s13",
@@ -317,7 +329,8 @@
         "location": "桃の郷事務所",
         "manager": "看護スタッフ",
         "notes": "検温用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s14",
@@ -328,7 +341,8 @@
         "location": "桃の郷事務所",
         "manager": "看護スタッフ",
         "notes": "SpO2測定用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s15",
@@ -339,7 +353,8 @@
         "location": "5番館倉庫",
         "manager": "看護スタッフ",
         "notes": "個包装（2枚入）",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s16",
@@ -350,7 +365,8 @@
         "location": "5番館倉庫",
         "manager": "看護スタッフ",
         "notes": "滅菌ガーゼ",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s17",
@@ -361,7 +377,8 @@
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "不織布簡易ガウン",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s18",
@@ -372,7 +389,8 @@
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "撥水フルプロテクション",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s19",
@@ -383,7 +401,8 @@
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "感染防止シールド",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s20",
@@ -394,7 +413,8 @@
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "保護メガネ",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s21",
@@ -405,7 +425,8 @@
         "location": "5番館倉庫",
         "manager": "衛生担当",
         "notes": "ヘアカバー",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s22",
@@ -416,7 +437,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "非常災害・来客用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s23",
@@ -427,7 +449,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "非常災害時用 飯碗",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s24",
@@ -438,7 +461,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "非常災害時用 汁物",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s25",
@@ -449,7 +473,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "非常災害時用 弁当",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s26",
@@ -460,7 +485,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "非常災害時用 丼",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "②衛生用品-2（BCP感染症対策）"
       },
       {
         "id": "s27",
@@ -471,7 +497,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "厨房業務用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "③消耗品類（洗剤など）"
       },
       {
         "id": "s28",
@@ -482,7 +509,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "頑固な汚れ落とし用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "③消耗品類（洗剤など）"
       },
       {
         "id": "s29",
@@ -493,7 +521,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "業務用45L",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "③消耗品類（洗剤など）"
       },
       {
         "id": "s30",
@@ -504,7 +533,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "業務用30L",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "③消耗品類（洗剤など）"
       },
       {
         "id": "s31",
@@ -515,7 +545,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "手洗い場詰替え用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "③消耗品類（洗剤など）"
       },
       {
         "id": "s32",
@@ -526,7 +557,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "携帯・卓上用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "③消耗品類（洗剤など）"
       },
       {
         "id": "s33",
@@ -537,7 +569,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "漂白・除菌用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "③消耗品類（洗剤など）"
       },
       {
         "id": "s34",
@@ -548,7 +581,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "部分汚れ用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "③消耗品類（洗剤など）"
       },
       {
         "id": "s35",
@@ -559,7 +593,8 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "トイレ清掃用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "③消耗品類（洗剤など）"
       },
       {
         "id": "s36",
@@ -570,7 +605,8 @@
         "location": "デイサービス浴室",
         "manager": "介護スタッフ",
         "notes": "利用者お風呂用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "④デイサービス"
       },
       {
         "id": "s37",
@@ -581,7 +617,8 @@
         "location": "デイサービス浴室",
         "manager": "介護スタッフ",
         "notes": "利用者お風呂用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "④デイサービス"
       },
       {
         "id": "s38",
@@ -592,18 +629,20 @@
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "消耗品",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "④デイサービス"
       },
       {
         "id": "s39",
         "name": "ハンドペーパー",
-        "currentStock": 250,
+        "currentStock": 270,
         "requiredStock": 250,
         "unit": "袋",
         "location": "5番館倉庫",
         "manager": "事務員",
         "notes": "ペーパータオル",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "④デイサービス"
       },
       {
         "id": "s40",
@@ -614,7 +653,8 @@
         "location": "デイサービス浴室",
         "manager": "介護スタッフ",
         "notes": "お風呂清掃用",
-        "alertDismissed": false
+        "alertDismissed": false,
+        "category": "④デイサービス"
       }
     ],
     "withdrawals": [
@@ -722,8 +762,43 @@
       "佐藤",
       "高橋",
       "渡辺",
-      "鈴木"
+      "鈴木",
+      "テスト職員"
     ],
-    "staffWithdrawals": []
+    "staffWithdrawals": [
+      {
+        "id": "sw_phgg494zu",
+        "date": "2026-10-06 17:00",
+        "office": "デイサービス",
+        "category": "②衛生用品-2（BCP感染症対策）",
+        "itemName": "テスト用デイサービス特注タオル",
+        "quantity": 5,
+        "staffName": "テスト職員"
+      }
+    ],
+    "deletedStockpiles": [
+      "新規テスト備蓄品a",
+      "テスト品目",
+      "テスト用デイサビス特注タオル",
+      "pvc使い捨て手袋s",
+      "テスト用デイサビス特注タオル更新済",
+      "テスト品"
+    ],
+    "deletedStockpileIds": [
+      "s_muxb0wzi_gvq69",
+      "s_muxbi2dz_ophao",
+      "s_muxbwfnk_npx8q",
+      "s1",
+      "s_muxc9wbe_tm92t",
+      "s_muxca0k4_5z14r"
+    ],
+    "deletedProducts": [
+      "新規テスト商品p",
+      "テスト尿取りパットz"
+    ],
+    "deletedProductIds": [
+      "p_muxb0x0a_r3kjf",
+      "p_muxc9wcc_ot4i8"
+    ]
   }
 }

@@ -7,7 +7,9 @@ const app = express();
 const PORT = 3000;
 const DATA_FILE = path.join(process.cwd(), "data-store.json");
 const BACKUP_FILE = path.join(process.cwd(), "data-store-backup.json");
+const BACKUP_TMP_FILE = path.join("/tmp", "data-store-backup.json");
 const MASTER_TEMPLATE_FILE = path.join(process.cwd(), "data-store-master-template.json");
+let memoryBackup: any = null;
 
 app.use(express.json());
 
@@ -401,7 +403,7 @@ app.get("/api/backup/export", async (req, res) => {
 // 2. Save server snapshot (データ保存)
 app.post("/api/backup/save", async (req, res) => {
   try {
-    const db = await readDatabase();
+    const db = (req.body?.data && typeof req.body.data === "object") ? req.body.data : await readDatabase();
     const snapshot = {
       savedAt: new Date().toISOString(),
       savedBy: req.body?.staffName || "管理者",
@@ -410,9 +412,19 @@ app.post("/api/backup/save", async (req, res) => {
       withdrawalsCount: db.withdrawals?.length || 0,
       data: db
     };
-    await fs.writeFile(BACKUP_FILE, JSON.stringify(snapshot, null, 2), "utf-8");
+    memoryBackup = snapshot;
+    
+    // Save to BACKUP_FILE with fallback to BACKUP_TMP_FILE
+    try {
+      await fs.writeFile(BACKUP_FILE, JSON.stringify(snapshot, null, 2), "utf-8");
+    } catch (errFile) {
+      try {
+        await fs.writeFile(BACKUP_TMP_FILE, JSON.stringify(snapshot, null, 2), "utf-8");
+      } catch {}
+    }
+
     res.json({
-      message: `データを保存しました（BCP備蓄${db.stockpiles?.length}品目・販売物品${db.products?.length}品目・履歴${db.withdrawals?.length}件）`,
+      message: `データを保存しました（BCP備蓄${db.stockpiles?.length || 0}品目・販売物品${db.products?.length || 0}品目・履歴${db.withdrawals?.length || 0}件）`,
       savedAt: snapshot.savedAt,
       data: db
     });
@@ -424,15 +436,32 @@ app.post("/api/backup/save", async (req, res) => {
 // 3. Check status of last saved snapshot
 app.get("/api/backup/status", async (req, res) => {
   try {
-    const raw = await fs.readFile(BACKUP_FILE, "utf-8");
-    const snapshot = JSON.parse(raw);
-    res.json({
-      hasBackup: true,
-      savedAt: snapshot.savedAt,
-      savedBy: snapshot.savedBy,
-      productsCount: snapshot.productsCount || snapshot.data?.products?.length || 0,
-      stockpilesCount: snapshot.stockpilesCount || snapshot.data?.stockpiles?.length || 0
-    });
+    let snapshot = memoryBackup;
+    if (!snapshot) {
+      try {
+        const raw = await fs.readFile(BACKUP_FILE, "utf-8");
+        snapshot = JSON.parse(raw);
+        memoryBackup = snapshot;
+      } catch {
+        try {
+          const raw = await fs.readFile(BACKUP_TMP_FILE, "utf-8");
+          snapshot = JSON.parse(raw);
+          memoryBackup = snapshot;
+        } catch {}
+      }
+    }
+
+    if (snapshot) {
+      return res.json({
+        hasBackup: true,
+        savedAt: snapshot.savedAt,
+        savedBy: snapshot.savedBy,
+        productsCount: snapshot.productsCount || snapshot.data?.products?.length || 0,
+        stockpilesCount: snapshot.stockpilesCount || snapshot.data?.stockpiles?.length || 0
+      });
+    }
+
+    res.json({ hasBackup: false });
   } catch {
     res.json({ hasBackup: false });
   }
@@ -480,8 +509,25 @@ app.post("/api/backup/restore", async (req, res) => {
 // 5. Restore from server snapshot (直近の保存データから復元)
 app.post("/api/backup/restore-snapshot", async (req, res) => {
   try {
-    const raw = await fs.readFile(BACKUP_FILE, "utf-8");
-    const snapshot = JSON.parse(raw);
+    let snapshot = memoryBackup;
+    if (!snapshot) {
+      try {
+        const raw = await fs.readFile(BACKUP_FILE, "utf-8");
+        snapshot = JSON.parse(raw);
+        memoryBackup = snapshot;
+      } catch {
+        try {
+          const raw = await fs.readFile(BACKUP_TMP_FILE, "utf-8");
+          snapshot = JSON.parse(raw);
+          memoryBackup = snapshot;
+        } catch {}
+      }
+    }
+
+    if (!snapshot) {
+      return res.status(404).json({ error: "保存データが見つかりません。先に「データ保存」を行ってください。" });
+    }
+
     const dbToRestore = snapshot.data || snapshot;
     await writeDatabase(dbToRestore);
     res.json({
@@ -489,8 +535,8 @@ app.post("/api/backup/restore-snapshot", async (req, res) => {
       savedAt: snapshot.savedAt,
       data: dbToRestore
     });
-  } catch {
-    res.status(404).json({ error: "保存データが見つかりません。先に「データ保存」を行ってください。" });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "復元に失敗しました" });
   }
 });
 

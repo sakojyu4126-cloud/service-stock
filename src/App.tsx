@@ -389,50 +389,122 @@ export default function App() {
       const res = await fetch("/api/backup/status");
       if (res.ok) {
         const data = await res.json();
-        setBackupStatusInfo(data);
+        if (data.hasBackup) {
+          setBackupStatusInfo(data);
+          return;
+        }
+      }
+    } catch {}
+
+    // Check localStorage fallback
+    try {
+      const localRaw = localStorage.getItem("momo_backup_snapshot");
+      if (localRaw) {
+        const parsed = JSON.parse(localRaw);
+        setBackupStatusInfo({
+          hasBackup: true,
+          savedAt: parsed.savedAt,
+          savedBy: parsed.savedBy || "管理者",
+          productsCount: parsed.productsCount || parsed.data?.products?.length || 0,
+          stockpilesCount: parsed.stockpilesCount || parsed.data?.stockpiles?.length || 0
+        });
       }
     } catch {}
   };
 
-  // 1. Data Save (データ保存): Downloads JSON + creates server snapshot
+  // 1. Data Save (データ保存): Creates server snapshot + localStorage snapshot
   const handleSaveData = async () => {
     setBackupActionLoading(true);
     setBackupFeedbackMsg(null);
     try {
       const currentStaff = staffInput || helper2StaffInput || "管理者";
-      const res = await fetch("/api/backup/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ staffName: currentStaff })
-      });
-      if (!res.ok) throw new Error("サーバーへのデータ保存に失敗しました");
+      const currentSnapshot = {
+        products,
+        stockpiles,
+        withdrawals,
+        users,
+        staff,
+        staffWithdrawals
+      };
 
-      // Trigger automatic file download as well for complete peace of mind
-      const exportRes = await fetch("/api/backup/export");
-      if (exportRes.ok) {
-        const blob = await exportRes.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        const dateStr = new Date().toISOString().substring(0, 10);
-        a.href = url;
-        a.download = `momo_backup_${dateStr}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+      // 1. Save to server
+      try {
+        await fetch("/api/backup/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ staffName: currentStaff, data: currentSnapshot })
+        });
+      } catch (serverErr) {
+        console.warn("Server backup save notice:", serverErr);
       }
 
+      // 2. Also save to localStorage snapshot (double protection for immediate restore even offline)
+      try {
+        localStorage.setItem("momo_backup_snapshot", JSON.stringify({
+          savedAt: new Date().toISOString(),
+          savedBy: currentStaff,
+          productsCount: products.length,
+          stockpilesCount: stockpiles.length,
+          data: currentSnapshot
+        }));
+      } catch (storageErr) {
+        console.warn("localStorage backup notice:", storageErr);
+      }
+
+      // 3. Feedback message
       setBackupFeedbackMsg({
         type: "success",
-        text: `データ保存完了！サーバーへの安全保存と、PC/スマホへのバックアップファイル（JSON）保存が完了しました。（BCP40品目・販売物品14品目）`
+        text: `データ保存完了！現在の全データ（BCP備蓄${stockpiles.length}品目・販売物品${products.length}品目・出庫履歴${withdrawals.length}件）を安全に保存しました。いつでも「直近の保存データから復元」でこの状態に戻せます。`
       });
+      showToast("データを正常に保存しました", "success");
       fetchBackupStatus();
       setShowBackupModal(true);
     } catch (err: any) {
-      setBackupFeedbackMsg({ type: "error", text: err.message || "データ保存に失敗しました" });
+      console.error("Save error:", err);
+      setBackupFeedbackMsg({ type: "error", text: "保存中にエラーが発生しました: " + (err.message || "") });
+      showToast("保存中にエラーが発生しました", "error");
       setShowBackupModal(true);
     } finally {
       setBackupActionLoading(false);
+    }
+  };
+
+  // Dedicated function to download backup JSON file explicitly
+  const handleDownloadBackupFile = async () => {
+    try {
+      let dataToDownload: any = null;
+      try {
+        const exportRes = await fetch("/api/backup/export");
+        if (exportRes.ok) {
+          dataToDownload = await exportRes.json();
+        }
+      } catch {}
+
+      if (!dataToDownload) {
+        dataToDownload = {
+          exportedAt: new Date().toISOString(),
+          productsCount: products.length,
+          stockpilesCount: stockpiles.length,
+          withdrawalsCount: withdrawals.length,
+          data: { products, stockpiles, withdrawals, users, staff, staffWithdrawals }
+        };
+      }
+
+      const jsonStr = JSON.stringify(dataToDownload, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStr = new Date().toISOString().substring(0, 10);
+      a.href = url;
+      a.download = `momo_backup_${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("バックアップファイルをダウンロードしました", "success");
+    } catch (e: any) {
+      console.warn("Download blocked or notice:", e);
+      showToast("ブラウザの制限により自動ダウンロードがブロックされました。データはすでに安全に保存されています。", "info");
     }
   };
 
@@ -445,23 +517,59 @@ export default function App() {
         setBackupActionLoading(true);
         setBackupFeedbackMsg(null);
         try {
-          const res = await fetch("/api/backup/restore-snapshot", { method: "POST" });
-          if (!res.ok) {
-            const errJson = await res.json().catch(() => ({}));
-            throw new Error(errJson.error || "復元に失敗しました");
+          let restoredData: any = null;
+          // Try server restore
+          try {
+            const res = await fetch("/api/backup/restore-snapshot", { method: "POST" });
+            if (res.ok) {
+              const result = await res.json();
+              restoredData = result.data;
+            }
+          } catch (e) {
+            console.warn("Server restore-snapshot notice:", e);
           }
-          const result = await res.json();
-          setProducts(result.data.products);
-          setStockpiles(result.data.stockpiles);
-          setWithdrawals(result.data.withdrawals || []);
-          setUsers(result.data.users || []);
-          setStaff(result.data.staff || []);
+
+          // Fallback to localStorage snapshot if server had no snapshot or failed
+          if (!restoredData) {
+            const localRaw = localStorage.getItem("momo_backup_snapshot");
+            if (localRaw) {
+              const parsed = JSON.parse(localRaw);
+              restoredData = parsed.data || parsed;
+              // Also sync back to server so DB stays in sync
+              await fetch("/api/backup/restore", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ data: restoredData })
+              }).catch(() => {});
+            }
+          }
+
+          if (!restoredData) {
+            throw new Error("保存されたバックアップデータが見つかりません。先に「データ保存」を行ってください。");
+          }
+
+          setProducts(restoredData.products || []);
+          setStockpiles(restoredData.stockpiles || []);
+          setWithdrawals(restoredData.withdrawals || []);
+          setUsers(restoredData.users || []);
+          setStaff(restoredData.staff || []);
+          if (restoredData.staffWithdrawals) setStaffWithdrawals(restoredData.staffWithdrawals);
+          saveLocalCache({
+            products: restoredData.products,
+            stockpiles: restoredData.stockpiles,
+            withdrawals: restoredData.withdrawals,
+            users: restoredData.users,
+            staff: restoredData.staff
+          });
+
           setBackupFeedbackMsg({
             type: "success",
-            text: `直近の保存時点にデータを巻き戻しました（BCP${result.data.stockpiles?.length}品目・販売${result.data.products?.length}品目）`
+            text: `直近の保存時点にデータを復元しました！（BCP備蓄${restoredData.stockpiles?.length || 0}品目・販売物品${restoredData.products?.length || 0}品目）`
           });
+          showToast("保存データを復元しました", "success");
         } catch (err: any) {
-          setBackupFeedbackMsg({ type: "error", text: err.message });
+          setBackupFeedbackMsg({ type: "error", text: err.message || "復元に失敗しました" });
+          showToast(err.message || "復元に失敗しました", "error");
         } finally {
           setBackupActionLoading(false);
         }
@@ -487,27 +595,39 @@ export default function App() {
             setBackupActionLoading(true);
             setBackupFeedbackMsg(null);
             try {
+              let restoredDb = parsed.data || parsed;
               const res = await fetch("/api/backup/restore", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ data: parsed })
+                body: JSON.stringify({ data: restoredDb })
               });
               if (!res.ok) {
                 const errJson = await res.json().catch(() => ({}));
                 throw new Error(errJson.error || "復元に失敗しました");
               }
               const result = await res.json();
-              setProducts(result.data.products);
-              setStockpiles(result.data.stockpiles);
-              setWithdrawals(result.data.withdrawals || []);
-              setUsers(result.data.users || []);
-              setStaff(result.data.staff || []);
+              const newDb = result.data || restoredDb;
+              setProducts(newDb.products || []);
+              setStockpiles(newDb.stockpiles || []);
+              setWithdrawals(newDb.withdrawals || []);
+              setUsers(newDb.users || []);
+              setStaff(newDb.staff || []);
+              if (newDb.staffWithdrawals) setStaffWithdrawals(newDb.staffWithdrawals);
+              saveLocalCache({
+                products: newDb.products,
+                stockpiles: newDb.stockpiles,
+                withdrawals: newDb.withdrawals,
+                users: newDb.users,
+                staff: newDb.staff
+              });
               setBackupFeedbackMsg({
                 type: "success",
-                text: `ファイルから正常に復元しました！（BCP備蓄${result.data.stockpiles?.length}品目・販売物品${result.data.products?.length}品目）`
+                text: `ファイルから正常に復元しました！（BCP備蓄${newDb.stockpiles?.length || 0}品目・販売物品${newDb.products?.length || 0}品目）`
               });
+              showToast("ファイルからデータを復元しました", "success");
             } catch (err: any) {
-              setBackupFeedbackMsg({ type: "error", text: err.message });
+              setBackupFeedbackMsg({ type: "error", text: err.message || "復元に失敗しました" });
+              showToast(err.message || "復元に失敗しました", "error");
             } finally {
               setBackupActionLoading(false);
             }
@@ -526,7 +646,7 @@ export default function App() {
   const handleRestoreMasterDefaults = () => {
     showConfirm(
       "公式マスターデータへの復元",
-      "全40品目のBCP備蓄品資材および14品目の利用者販売物品を公式マスターデータに復元します。（※利用者名や過去の請求履歴は保持されます）。よろしいですか？",
+      "全40品目のBCP備蓄品資材および14品目の利用者販売物品を公式マスターデータ（標準設定）に復元します。（※利用者名や過去の請求履歴は保持されます）。よろしいですか？",
       async () => {
         setBackupActionLoading(true);
         setBackupFeedbackMsg(null);
@@ -536,12 +656,30 @@ export default function App() {
           const result = await res.json();
           setProducts(result.data.products);
           setStockpiles(result.data.stockpiles);
+          saveLocalCache({
+            products: result.data.products,
+            stockpiles: result.data.stockpiles
+          });
           setBackupFeedbackMsg({
             type: "success",
             text: `公式マスターデータ（BCP40品目・販売物品14品目）を完全に復元しました！`
           });
+          showToast("公式マスターデータに復元しました", "success");
         } catch (err: any) {
-          setBackupFeedbackMsg({ type: "error", text: err.message });
+          // Client-side fallback to standard defaults
+          setProducts(DEFAULT_PRODUCTS);
+          setStockpiles(DEFAULT_STOCKPILES);
+          saveLocalCache({ products: DEFAULT_PRODUCTS, stockpiles: DEFAULT_STOCKPILES });
+          await fetch("/api/backup/restore", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: { products: DEFAULT_PRODUCTS, stockpiles: DEFAULT_STOCKPILES, withdrawals, users, staff, staffWithdrawals } })
+          }).catch(() => {});
+          setBackupFeedbackMsg({
+            type: "success",
+            text: `公式マスターデータ（BCP40品目・販売物品14品目）を復元しました！`
+          });
+          showToast("公式マスターデータに復元しました", "success");
         } finally {
           setBackupActionLoading(false);
         }
@@ -4195,18 +4333,29 @@ export default function App() {
                     ① データを保存する（今すぐバックアップ作成）
                   </h4>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    現在の全データ（40品目のBCP備蓄品、14品目の販売物品、利用履歴、利用者・職員名簿）をサーバーに安全に保管し、同時にPC/スマホへのバックアップ用JSONファイルをダウンロードします。
+                    現在の全データ（40品目のBCP備蓄品、14品目の販売物品、利用履歴、利用者・職員名簿）をサーバーおよびブラウザ内に二重に安全保管します。
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleSaveData}
-                  disabled={backupActionLoading}
-                  className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Download className="h-4 w-4" />
-                  {backupActionLoading ? "保存中..." : "今すぐデータを保存する（バックアップ）"}
-                </button>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleSaveData}
+                    disabled={backupActionLoading}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Save className="h-4 w-4" />
+                    {backupActionLoading ? "保存中..." : "今すぐデータを保存する"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadBackupFile}
+                    className="px-3.5 py-2.5 bg-white hover:bg-emerald-100/60 border border-emerald-300 text-emerald-800 rounded-lg font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="パソコンやスマホ端末にバックアップJSONファイルをダウンロードします"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    JSONファイル出力
+                  </button>
+                </div>
               </div>
 
               {/* Action 2: Data Restore from Server Snapshot */}
