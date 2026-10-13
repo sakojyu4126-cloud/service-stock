@@ -488,9 +488,6 @@ export default function App() {
       }
     });
 
-    // 4. Initial server fetch as fallback
-    fetchData(true);
-
     return () => {
       unsubscribe();
     };
@@ -1091,12 +1088,12 @@ export default function App() {
       const current = currentRaw ? JSON.parse(currentRaw) : {};
       const updated = {
         ...current,
-        products: partial.products !== undefined ? partial.products : products,
-        stockpiles: partial.stockpiles !== undefined ? partial.stockpiles : stockpiles,
-        withdrawals: partial.withdrawals !== undefined ? partial.withdrawals : withdrawals,
-        users: partial.users !== undefined ? partial.users : users,
-        staff: partial.staff !== undefined ? partial.staff : staff,
-        staffWithdrawals: partial.staffWithdrawals !== undefined ? partial.staffWithdrawals : staffWithdrawals
+        products: partial.products !== undefined ? partial.products : (current.products || products),
+        stockpiles: partial.stockpiles !== undefined ? partial.stockpiles : (current.stockpiles || stockpiles),
+        withdrawals: partial.withdrawals !== undefined ? partial.withdrawals : (current.withdrawals || withdrawals),
+        users: partial.users !== undefined ? partial.users : (current.users || users),
+        staff: partial.staff !== undefined ? partial.staff : (current.staff || staff),
+        staffWithdrawals: partial.staffWithdrawals !== undefined ? partial.staffWithdrawals : (current.staffWithdrawals || staffWithdrawals)
       };
       localStorage.setItem("momo_offline_cache", JSON.stringify(updated));
     } catch (e) {
@@ -1158,11 +1155,6 @@ export default function App() {
         throw new Error(errJson.error || "更新に失敗しました");
       }
 
-      const result = await res.json();
-      if (result?.data?.stockpiles) {
-        setStockpiles(result.data.stockpiles);
-        saveLocalCache({ stockpiles: result.data.stockpiles });
-      }
       showToast(`「${updatedStock.name}」の情報を登録しました（現在庫: ${updatedStock.currentStock}${updatedStock.unit}）`, "success");
     } catch (err: any) {
       console.warn("Server sync notice (local change preserved):", err);
@@ -1247,13 +1239,6 @@ export default function App() {
         throw new Error(errJson.error || "商品の更新に失敗しました");
       }
 
-      const result = await res.json();
-      if (result?.data?.products) {
-        setProducts(result.data.products);
-      }
-      if (result?.data?.stockpiles) {
-        setStockpiles(result.data.stockpiles);
-      }
       showToast(`「${updatedProd.name}」の情報を登録しました（現在庫: ${updatedProd.currentStock}個）`, "success");
     } catch (err: any) {
       console.warn("Server sync notice (local change preserved):", err);
@@ -1371,39 +1356,21 @@ export default function App() {
       !staff.includes(finalStaff) ? finalStaff : undefined
     ).catch(e => console.warn("Firestore withdrawal sync notice:", e));
 
-    // 3. Background sync to server API (fallback/backup)
-    try {
-      const res = await fetch("/api/withdrawals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userName: finalUser,
-          staffName: finalStaff,
-          productId: matchedProd.id,
-          productName: matchedProd.name,
-          quantity: qty,
-          date: customWithdrawDate || null
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.data?.products) setProducts(data.data.products);
-        if (data?.data?.withdrawals) setWithdrawals(data.data.withdrawals);
-        if (data?.data?.stockpiles) setStockpiles(data.data.stockpiles);
-        if (data?.data?.users) setUsers(data.data.users);
-        if (data?.data?.staff) setStaff(data.data.staff);
-        saveLocalCache({
-          products: data.data.products,
-          withdrawals: data.data.withdrawals,
-          stockpiles: data.data.stockpiles,
-          users: data.data.users,
-          staff: data.data.staff
-        });
-      }
-    } catch (err: any) {
+    // 3. Background sync to server API (fallback/backup - DO NOT overwrite local/Firestore state)
+    fetch("/api/withdrawals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userName: finalUser,
+        staffName: finalStaff,
+        productId: matchedProd.id,
+        productName: matchedProd.name,
+        quantity: qty,
+        date: customWithdrawDate || null
+      })
+    }).catch(err => {
       console.warn("Withdrawal server sync notice (local change preserved):", err);
-    }
+    });
   };
 
   // Handle Helper 2 (Staff/BCP) Withdrawal Submission (スマホ出庫②)
@@ -1432,11 +1399,33 @@ export default function App() {
 
     let nextStock = 0;
     let updatedStockpiles = stockpiles;
+    let finalStockpile: Stockpile;
+
     if (targetStockpile) {
       nextStock = Math.max(0, targetStockpile.currentStock - qty);
-      updatedStockpiles = stockpiles.map(s => s.id === targetStockpile.id ? { ...s, currentStock: nextStock, alertDismissed: nextStock > 1 ? s.alertDismissed : false } : s);
-      setStockpiles(updatedStockpiles);
+      finalStockpile = {
+        ...targetStockpile,
+        currentStock: nextStock,
+        alertDismissed: nextStock > 1 ? targetStockpile.alertDismissed : false
+      };
+      updatedStockpiles = stockpiles.map(s => s.id === targetStockpile!.id ? finalStockpile : s);
+    } else {
+      nextStock = 0;
+      finalStockpile = {
+        id: "s_" + Date.now().toString(36),
+        name: helper2ItemName,
+        category: helper2Category || "①衛生用品-1（日常業務用）",
+        currentStock: 0,
+        requiredStock: 5,
+        unit: getHelper2ItemUnit(helper2ItemName) || "個",
+        location: "5番館倉庫",
+        manager: finalStaff || "事務員",
+        notes: "スマホ出庫②より登録",
+        alertDismissed: false
+      };
+      updatedStockpiles = [...stockpiles, finalStockpile];
     }
+    setStockpiles(updatedStockpiles);
 
     const withdrawDateStr = (helper2WithdrawDate || new Date().toISOString().substring(0, 16)).replace("T", " ");
     const newStaffWithdrawal: StaffWithdrawal = {
@@ -1480,43 +1469,27 @@ export default function App() {
     }, 4500);
 
     // Real-time Cloud Firestore sync (pushes immediately to PC & all devices)
-    if (targetStockpile) {
-      registerStaffWithdrawalToFirestore(
-        newStaffWithdrawal,
-        { ...targetStockpile, currentStock: nextStock },
-        !staff.includes(finalStaff) ? finalStaff : undefined
-      ).catch(e => console.warn("Firestore staff withdrawal sync notice:", e));
-    }
+    registerStaffWithdrawalToFirestore(
+      newStaffWithdrawal,
+      finalStockpile,
+      !staff.includes(finalStaff) ? finalStaff : undefined
+    ).catch(e => console.warn("Firestore staff withdrawal sync notice:", e));
 
-    // Background sync to server API
-    try {
-      const res = await fetch("/api/staff-withdrawals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          office: helper2Office,
-          category: helper2Category,
-          itemName: helper2ItemName,
-          quantity: qty,
-          staffName: finalStaff,
-          date: helper2WithdrawDate || null
-        })
-      });
-
-      if (res.ok) {
-        const result = await res.json();
-        if (result?.data?.stockpiles) setStockpiles(result.data.stockpiles);
-        if (result?.data?.staff) setStaff(result.data.staff);
-        if (result?.data?.staffWithdrawals) setStaffWithdrawals(result.data.staffWithdrawals);
-        saveLocalCache({
-          stockpiles: result.data.stockpiles,
-          staff: result.data.staff,
-          staffWithdrawals: result.data.staffWithdrawals
-        });
-      }
-    } catch (err: any) {
+    // Background sync to server API for persistent logging/backup (DO NOT overwrite local/Firestore state)
+    fetch("/api/staff-withdrawals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        office: helper2Office,
+        category: helper2Category,
+        itemName: helper2ItemName,
+        quantity: qty,
+        staffName: finalStaff,
+        date: helper2WithdrawDate || null
+      })
+    }).catch(err => {
       console.warn("Staff withdrawal server sync notice (local change preserved):", err);
-    }
+    });
   };
 
   // Toggle Billing Status
@@ -1536,9 +1509,6 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: nextStatus, billedDate: todayStr })
       });
-      if (!res.ok) throw new Error("ステータスの変更に失敗しました");
-      const result = await res.json();
-      if (result?.data?.withdrawals) setWithdrawals(result.data.withdrawals);
     } catch (err: any) {
       console.warn("Server toggle billing notice:", err);
     }
@@ -1550,16 +1520,16 @@ export default function App() {
     setIsLoading(true);
     try {
       const todayStr = new Date().toISOString().substring(0, 10);
+      setWithdrawals(prev => prev.map(w => selectedWithdrawals.includes(w.id) ? { ...w, status: "billed", billedDate: todayStr } : w));
       for (let id of selectedWithdrawals) {
         updateWithdrawalStatusInFirestore(id, "billed", todayStr).catch(e => console.warn("Firestore bulk notice:", e));
-        await fetch(`/api/withdrawals/${id}`, {
+        fetch(`/api/withdrawals/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: "billed", billedDate: todayStr })
-        });
+        }).catch(() => {});
       }
       setSelectedWithdrawals([]);
-      await fetchData();
     } catch (err) {
       alert("一括更新中にエラーが発生しました");
     } finally {
@@ -1599,13 +1569,7 @@ export default function App() {
         deleteWithdrawalFromFirestore(id, prodWithRestoredStock).catch(e => console.warn("Firestore delete withdrawal notice:", e));
 
         try {
-          const res = await fetch(`/api/withdrawals/${id}`, { method: "DELETE" });
-          if (res.ok) {
-            const result = await res.json();
-            if (result?.data?.withdrawals) setWithdrawals(result.data.withdrawals);
-            if (result?.data?.products) setProducts(result.data.products);
-            saveLocalCache({ withdrawals: result.data.withdrawals, products: result.data.products });
-          }
+          await fetch(`/api/withdrawals/${id}`, { method: "DELETE" });
           showToast("出庫履歴を削除し、在庫を元に戻しました", "success");
         } catch (err: any) {
           console.warn("Delete withdrawal notice:", err);
@@ -1650,13 +1614,7 @@ export default function App() {
         deleteStaffWithdrawalFromFirestore(id, stockWithRestoredStock).catch(e => console.warn("Firestore delete staff withdrawal notice:", e));
 
         try {
-          const res = await fetch(`/api/staff-withdrawals/${id}`, { method: "DELETE" });
-          if (res.ok) {
-            const result = await res.json();
-            if (result?.data?.stockpiles) setStockpiles(result.data.stockpiles);
-            if (result?.data?.staffWithdrawals) setStaffWithdrawals(result.data.staffWithdrawals);
-            saveLocalCache({ stockpiles: result.data.stockpiles, staffWithdrawals: result.data.staffWithdrawals });
-          }
+          await fetch(`/api/staff-withdrawals/${id}`, { method: "DELETE" });
           showToast("職員出庫履歴を削除し、備蓄在庫を元に戻しました", "success");
         } catch (err: any) {
           console.warn("Delete staff withdrawal notice:", err);
@@ -1681,12 +1639,7 @@ export default function App() {
         clearAllStaffWithdrawalsFromFirestore(allIds).catch(e => console.warn("Firestore clear staff withdrawals notice:", e));
 
         try {
-          const res = await fetch("/api/staff-withdrawals/clear", { method: "POST" });
-          if (res.ok) {
-            const result = await res.json();
-            if (result?.data?.staffWithdrawals) setStaffWithdrawals(result.data.staffWithdrawals);
-            saveLocalCache({ staffWithdrawals: result.data.staffWithdrawals });
-          }
+          await fetch("/api/staff-withdrawals/clear", { method: "POST" });
           showToast("全ての職員出庫履歴を削除しました", "success");
         } catch (err: any) {
           showToast("履歴を削除しました", "success");
@@ -1705,12 +1658,11 @@ export default function App() {
         setIsLoading(true);
         try {
           const ids = withdrawals.map(w => w.id);
+          setWithdrawals([]);
+          saveLocalCache({ withdrawals: [] });
           deleteMultipleWithdrawalsFromFirestore(ids).catch(e => console.warn("Firestore clear withdrawals notice:", e));
 
-          const res = await fetch("/api/withdrawals/clear", { method: "POST" });
-          if (!res.ok) throw new Error("履歴の削除に失敗しました");
-          const result = await res.json();
-          setWithdrawals(result.data.withdrawals || []);
+          fetch("/api/withdrawals/clear", { method: "POST" }).catch(() => {});
           setSelectedWithdrawals([]);
           alert("すべての払い出し履歴（請求対象者）を消去しました。");
         } catch (err: any) {
@@ -1737,20 +1689,13 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`/api/stockpiles/${id}`, {
+      await fetch(`/api/stockpiles/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentStock: newVal })
       });
-      if (res.ok) {
-        const result = await res.json();
-        if (result?.data?.stockpiles) {
-          setStockpiles(result.data.stockpiles);
-          saveLocalCache({ stockpiles: result.data.stockpiles });
-        }
-      }
     } catch (err: any) {
-      console.warn("Stockpile adjust error (local change retained):", err);
+      console.warn("Stockpile adjust notice (local change retained):", err);
     }
   };
 
@@ -1773,18 +1718,11 @@ export default function App() {
     }
     stockSetTimeoutRef.current[id] = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/stockpiles/${id}`, {
+        await fetch(`/api/stockpiles/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ currentStock: val })
         });
-        if (res.ok) {
-          const result = await res.json();
-          if (result?.data?.stockpiles) {
-            setStockpiles(result.data.stockpiles);
-            saveLocalCache({ stockpiles: result.data.stockpiles });
-          }
-        }
       } catch (err) {
         console.warn("Server stock update debounced notice:", err);
       }
@@ -1803,18 +1741,11 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`/api/stockpiles/${id}`, {
+      await fetch(`/api/stockpiles/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ alertDismissed: !currentMuted })
       });
-      if (res.ok) {
-        const result = await res.json();
-        if (result?.data?.stockpiles) {
-          setStockpiles(result.data.stockpiles);
-          saveLocalCache({ stockpiles: result.data.stockpiles });
-        }
-      }
     } catch (err: any) {
       console.warn("Dismiss alert notice:", err);
     }
@@ -1834,20 +1765,13 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`/api/products/${id}`, {
+      await fetch(`/api/products/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentStock: nextStock })
       });
-      if (res.ok) {
-        const result = await res.json();
-        if (result?.data?.products) {
-          setProducts(result.data.products);
-          saveLocalCache({ products: result.data.products });
-        }
-      }
     } catch (err: any) {
-      console.warn("Product adjust error (local change retained):", err);
+      console.warn("Product adjust notice (local change retained):", err);
     }
   };
 
@@ -1870,18 +1794,11 @@ export default function App() {
     }
     prodStockSetTimeoutRef.current[id] = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/products/${id}`, {
+        await fetch(`/api/products/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ currentStock: nextStock })
         });
-        if (res.ok) {
-          const result = await res.json();
-          if (result?.data?.products) {
-            setProducts(result.data.products);
-            saveLocalCache({ products: result.data.products });
-          }
-        }
       } catch (err) {
         console.warn("Server prod stock update debounced notice:", err);
       }
@@ -1932,7 +1849,7 @@ export default function App() {
       setNewProdPriceInclTax("");
       setNewProdCurrentStock(10);
 
-      const res = await fetch("/api/products", {
+      await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1946,16 +1863,6 @@ export default function App() {
         })
       });
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "商品の登録に失敗しました");
-      }
-      const result = await res.json();
-      if (result?.data?.products) {
-        setProducts(result.data.products);
-        saveLocalCache({ products: result.data.products });
-      }
-      
       showToast(`新しい商品「${addedName}」を登録しました！`, "success");
     } catch (err: any) {
       console.warn("Product add notice (local entry preserved):", err);
@@ -1980,14 +1887,7 @@ export default function App() {
         deleteProductFromFirestore(id).catch(e => console.warn("Firestore product delete notice:", e));
 
         try {
-          const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
-          if (res.ok) {
-            const result = await res.json();
-            if (result?.data?.products) {
-              setProducts(result.data.products);
-              saveLocalCache({ products: result.data.products });
-            }
-          }
+          await fetch(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
           showToast(`「${itemName}」を削除しました`, "success");
         } catch (err: any) {
           console.warn("Delete product notice:", err);
@@ -2040,7 +1940,7 @@ export default function App() {
       setNewStockManager("");
       setNewStockNotes("");
 
-      const res = await fetch("/api/stockpiles", {
+      await fetch("/api/stockpiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2054,14 +1954,6 @@ export default function App() {
           notes: optimisticStock.notes
         })
       });
-
-      if (res.ok) {
-        const result = await res.json();
-        if (result?.data?.stockpiles) {
-          setStockpiles(result.data.stockpiles);
-          saveLocalCache({ stockpiles: result.data.stockpiles });
-        }
-      }
 
       showToast(`新しい品目「${addedName}」を登録しました！`, "success");
     } catch (err: any) {
@@ -2087,14 +1979,7 @@ export default function App() {
         deleteStockpileFromFirestore(id).catch(e => console.warn("Firestore stockpile delete notice:", e));
 
         try {
-          const res = await fetch(`/api/stockpiles/${encodeURIComponent(id)}`, { method: "DELETE" });
-          if (res.ok) {
-            const result = await res.json();
-            if (result?.data?.stockpiles) {
-              setStockpiles(result.data.stockpiles);
-              saveLocalCache({ stockpiles: result.data.stockpiles });
-            }
-          }
+          await fetch(`/api/stockpiles/${encodeURIComponent(id)}`, { method: "DELETE" });
           showToast(`「${itemName}」を削除しました`, "success");
         } catch (err: any) {
           console.warn("Delete stockpile notice:", err);
@@ -2131,11 +2016,26 @@ export default function App() {
 
       if (activeImportType === "stockpiles") {
         setStockpiles(result.data.stockpiles || []);
+        saveLocalCache({ stockpiles: result.data.stockpiles || [] });
+        restoreAllDataToFirestore({ products, stockpiles: result.data.stockpiles || [] }).catch(e => console.warn("Firestore import sync notice:", e));
       } else {
         setProducts(result.data.products || []);
         setWithdrawals(result.data.withdrawals || []);
         setUsers(result.data.users || []);
         setStaff(result.data.staff || []);
+        saveLocalCache({
+          products: result.data.products || [],
+          withdrawals: result.data.withdrawals || [],
+          users: result.data.users || [],
+          staff: result.data.staff || []
+        });
+        restoreAllDataToFirestore({
+          products: result.data.products || [],
+          stockpiles,
+          withdrawals: result.data.withdrawals || [],
+          users: result.data.users || [],
+          staff: result.data.staff || []
+        }).catch(e => console.warn("Firestore import sync notice:", e));
       }
 
       setImportFeedback({
@@ -2166,6 +2066,8 @@ export default function App() {
           setStockpiles(result.data.stockpiles);
           setUsers(result.data.users);
           setStaff(result.data.staff);
+          saveLocalCache(result.data);
+          restoreAllDataToFirestore(result.data).catch(e => console.warn("Firestore reset sync notice:", e));
           alert("データベースを初期状態に復元しました。");
         } catch (err: any) {
           alert(err.message);

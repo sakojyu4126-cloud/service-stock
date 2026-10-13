@@ -2,6 +2,8 @@ import express from "express";
 import path from "path";
 import fs from "fs/promises";
 import { createServer as createViteServer } from "vite";
+import { db as firestoreDb } from "./src/firebase";
+import { getDocs, collection } from "firebase/firestore";
 
 const app = express();
 const PORT = 3000;
@@ -167,6 +169,60 @@ function normalizeName(name: string): string {
 let memoryDb: any = null;
 
 async function readDatabase() {
+  try {
+    const productsSnap = await getDocs(collection(firestoreDb, "products"));
+    if (!productsSnap.empty) {
+      const stockpilesSnap = await getDocs(collection(firestoreDb, "stockpiles"));
+      const withdrawalsSnap = await getDocs(collection(firestoreDb, "withdrawals"));
+      const staffWithdrawalsSnap = await getDocs(collection(firestoreDb, "staffWithdrawals"));
+      const usersSnap = await getDocs(collection(firestoreDb, "users"));
+      const staffSnap = await getDocs(collection(firestoreDb, "staff"));
+
+      const products: any[] = [];
+      productsSnap.forEach(d => products.push(d.data()));
+
+      const stockpiles: any[] = [];
+      stockpilesSnap.forEach(d => stockpiles.push(d.data()));
+
+      const withdrawals: any[] = [];
+      withdrawalsSnap.forEach(d => withdrawals.push(d.data()));
+      withdrawals.sort((a: any, b: any) => (b.date || "").localeCompare(a.date || ""));
+
+      const staffWithdrawals: any[] = [];
+      staffWithdrawalsSnap.forEach(d => staffWithdrawals.push(d.data()));
+      staffWithdrawals.sort((a: any, b: any) => (b.date || "").localeCompare(a.date || ""));
+
+      const users: string[] = [];
+      usersSnap.forEach(d => {
+        const val = d.data()?.name;
+        if (val && !users.includes(val)) users.push(val);
+      });
+
+      const staff: string[] = [];
+      staffSnap.forEach(d => {
+        const val = d.data()?.name;
+        if (val && !staff.includes(val)) staff.push(val);
+      });
+
+      const liveDb = {
+        products,
+        stockpiles,
+        withdrawals,
+        staffWithdrawals,
+        users,
+        staff,
+        deletedProducts: [],
+        deletedStockpiles: []
+      };
+
+      memoryDb = liveDb;
+      fs.writeFile(DATA_FILE, JSON.stringify(liveDb, null, 2), "utf-8").catch(() => {});
+      return liveDb;
+    }
+  } catch (err) {
+    console.warn("Firestore live read notice in server, falling back to disk cache:", err);
+  }
+
   if (memoryDb) {
     return memoryDb;
   }
@@ -240,65 +296,7 @@ async function readDatabase() {
       modified = true;
     }
 
-    // Name mapping to migrate legacy/fuzzy names to the standard clean ones in the categories dropdown
-    const nameMapping: Record<string, string> = {
-      "抗原検査キット": "抗原検査キット",
-      "マスク（N95他高機能マスク）": "マスク（N95高機能マスク）",
-      "マスク（不織布）": "マスク（不織布）",
-      "体温計（腋下）": "体温計（腋下）",
-      "体温計（非接触型）": "体温計（非接触型）",
-      "パルスオキシメーター": "パルスオキシメーター",
-      "消毒用アルコール": "消毒用アルコール（スプレー）",
-      "消毒用アルコール(5L）": "消毒用アルコール（5L）",
-      "消毒用アルコールスプレー": "消毒用アルコール（スプレー）",
-      "手指消毒ジェル": "手指消毒ジェル",
-      "次亜塩素酸ナトリウム": "次亜塩素酸ナトリウム（12％）",
-      "次亜塩素酸ナトリウム（5L）": "次亜塩素酸ナトリウム（12％）",
-      "ハイター": "ハイター",
-      "薬用ハンドソープ（5L)": "薬用ハンドソープ（5L）",
-      "中性洗剤（10L)": "中性洗剤（厨房用）",
-      "アルコール綿（個包装）": "アルコール綿（個包装）",
-      "ガーゼ": "ガーゼ類",
-      "ガウン(軽微）": "ガウン（薄手）",
-      "ガウン（重装備）": "ガウン（厚手）",
-      "PVC使い捨て手袋　L": "PVC使い捨て手袋L",
-      "PVC使い捨て手袋　M": "PVC使い捨て手袋M",
-      "PVC使い捨て手袋　S": "PVC使い捨て手袋S",
-      "フェイスシールド": "フェイスシールド",
-      "ゴーグル": "ゴーグル",
-      "キャップ": "キャップ",
-      "トイレットペーパー": "トイレットペーパー",
-      "ペーパータオル": "ハンドペーパー",
-      "ティッシュペーパー": "ハンドペーパー",
-      "使い捨て食器": "使い捨て食器（飯碗用）",
-      "紙コップ": "紙コップ",
-      "ゴミ袋大45L": "ゴミ袋 大（45L）",
-      "ゴミ袋中30L": "ゴミ袋 中（30L）"
-    };
 
-    if (parsed.stockpiles) {
-      // 1. Rename any old items if they match legacy names exactly
-      parsed.stockpiles.forEach((s: any) => {
-        if (s.name && nameMapping[s.name]) {
-          s.name = nameMapping[s.name];
-          modified = true;
-        }
-      });
-
-      // 2. Merge duplicate stockpile items resulting from renaming
-      const uniqueStockpiles: any[] = [];
-      parsed.stockpiles.forEach((s: any) => {
-        const existing = uniqueStockpiles.find(item => item.name === s.name && item.location === s.location);
-        if (existing) {
-          existing.currentStock = (existing.currentStock || 0) + (s.currentStock || 0);
-          existing.requiredStock = Math.max(existing.requiredStock || 0, s.requiredStock || 0);
-          modified = true;
-        } else {
-          uniqueStockpiles.push(s);
-        }
-      });
-      parsed.stockpiles = uniqueStockpiles;
-    }
 
     // Automatically migrate and inject any missing standard stockpile items
     // (skipping any intentionally deleted by user)
