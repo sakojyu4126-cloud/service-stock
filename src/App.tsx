@@ -5772,7 +5772,7 @@ export default function App() {
                   {/* Clarification Tag */}
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
                     <span className="text-blue-700 font-bold bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
-                      ✓ 「出庫カテゴリ」を①/②に省スペース化 ＆ 「品目名」を2倍に拡大 ＆ 「備考」をワイド表示
+                      ✓ 「品目名」と「備考」の配分を調整 ＆ 「現在量」表記に変更
                     </span>
                     <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                       ✓ 1枚目から綺麗に表が配置されます
@@ -5834,12 +5834,12 @@ export default function App() {
                           <tr className="bg-slate-100 border border-slate-300">
                             <th className="p-1 border border-slate-300 text-center w-7">No</th>
                             <th className="p-1 border border-slate-300 text-center w-8" title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
-                            <th className="p-1 border border-slate-300 font-bold text-left min-w-[200px]">品目（備蓄品名）<span className="text-[9px] text-blue-700 font-normal ml-1">(2倍拡大)</span></th>
-                            <th className="p-1 border border-slate-300 text-center w-12">現在庫</th>
+                            <th className="p-1 border border-slate-300 font-bold text-left min-w-[160px]">品目（備蓄品名）</th>
+                            <th className="p-1 border border-slate-300 text-center w-12">現在量</th>
                             <th className="p-1 border border-slate-300 text-center w-12">必要量</th>
                             <th className="p-1 border border-slate-300 text-left w-20">保管場所</th>
                             <th className="p-1 border border-slate-300 text-center w-12">状況</th>
-                            <th className="p-1 border border-slate-300 text-left">備考 (ワイド表示)</th>
+                            <th className="p-1 border border-slate-300 text-left min-w-[150px]">備考 (広幅)</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -6051,12 +6051,12 @@ export default function App() {
               <tr>
                 <th style={{ width: "26px", textAlign: "center" }}>No</th>
                 <th style={{ width: "36px", textAlign: "center" }} title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
-                <th style={{ width: "380px", minWidth: "280px" }}>品目（備蓄品名）</th>
-                <th style={{ width: "55px", textAlign: "center" }}>現在庫</th>
+                <th style={{ width: "325px", minWidth: "225px" }}>品目（備蓄品名）</th>
+                <th style={{ width: "55px", textAlign: "center" }}>現在量</th>
                 <th style={{ width: "55px", textAlign: "center" }}>必要量</th>
                 <th style={{ width: "90px" }}>保管場所</th>
                 <th style={{ width: "48px", textAlign: "center" }}>状況</th>
-                <th>備考</th>
+                <th style={{ minWidth: "200px" }}>備考</th>
               </tr>
             </thead>
             <tbody>
