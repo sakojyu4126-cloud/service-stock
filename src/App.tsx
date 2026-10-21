@@ -266,6 +266,7 @@ export default function App() {
   const [printMarginBottom, setPrintMarginBottom] = useState<number>(15);
   const [printMarginLeft, setPrintMarginLeft] = useState<number>(15);
   const [printMarginRight, setPrintMarginRight] = useState<number>(15);
+  const [printScale, setPrintScale] = useState<number>(80); // Default to 80% as requested for clean margins and framed business table
 
   const formatCategoryBadge = (category: string) => {
     if (!category) return "①";
@@ -5766,6 +5767,58 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* 6. Print Scale Controls (印刷倍率・比率) */}
+                <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="font-bold text-slate-800 flex items-center gap-2">
+                      <span>🔍 ⑥ 印刷倍率・比率（スケール設定）:</span>
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">
+                        {printScale}% {printScale === 80 ? "（★推奨・ゆったり余白で四角い表になります）" : printScale === 100 ? "（等倍・原寸）" : ""}
+                      </span>
+                    </div>
+                    {/* Quick Scale Presets */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[10px] text-slate-500">倍率プリセット:</span>
+                      {[
+                        { val: 80, label: "80% (推奨・余白十分)" },
+                        { val: 85, label: "85%" },
+                        { val: 90, label: "90%" },
+                        { val: 100, label: "100% (等倍)" },
+                      ].map((preset) => (
+                        <button
+                          key={preset.val}
+                          type="button"
+                          onClick={() => setPrintScale(preset.val)}
+                          className={`px-2.5 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                            printScale === preset.val
+                              ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                              : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-1">
+                    <span className="text-[11px] font-semibold text-slate-600 w-28 shrink-0">倍率スライダー:</span>
+                    <input
+                      type="range"
+                      min="65"
+                      max="105"
+                      step="5"
+                      value={printScale}
+                      onChange={(e) => setPrintScale(Number(e.target.value))}
+                      className="flex-1 accent-indigo-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                    />
+                    <span className="text-xs font-mono font-bold text-slate-800 w-12 text-right">{printScale}%</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 leading-relaxed">
+                    ※印刷比率を80%に設定すると、用紙の上下左右に十分な余白が確保され、四角い外枠に囲まれた一般的な一覧表として美しく印刷されます。
+                  </div>
+                </div>
+
                 <div className="pt-1 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
                   {/* Stamp Box Checkbox */}
                   <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white cursor-pointer select-none font-semibold text-slate-700 hover:bg-slate-50 transition">
@@ -5781,10 +5834,10 @@ export default function App() {
                   {/* Clarification Tag */}
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
                     <span className="text-blue-700 font-bold bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
-                      ✓ 「品目名」と「備考」の配分を調整 ＆ 「現在量」表記に変更
+                      ✓ 「品目名」と「備考」の配分を調整 ＆ 「現在量」表記
                     </span>
                     <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                      ✓ 1枚目から綺麗に表が配置されます
+                      ✓ 外枠と余白のある四角い表として印刷
                     </span>
                   </div>
                 </div>
@@ -5796,7 +5849,7 @@ export default function App() {
                   <div className="flex items-center gap-2">
                     <span>📄 帳票プレビュー（A4{printOrientation === "landscape" ? "横向き" : "縦向き"}・印字イメージ）:</span>
                     <span className="text-[10px] bg-slate-200 text-slate-700 font-mono px-2 py-0.5 rounded">
-                      余白: 上下 {printMarginTop}mm / 左右 {printMarginLeft}mm
+                      余白: 上下 {printMarginTop}mm / 左右 {printMarginLeft}mm ｜ 印刷倍率: {printScale}%
                     </span>
                   </div>
                   <span>対象品目数: {
@@ -5807,9 +5860,10 @@ export default function App() {
                 </div>
 
                 <div
-                  className="bg-white rounded-lg shadow-sm border border-slate-200 max-h-[38vh] overflow-y-auto text-[11px] space-y-3 font-sans transition-all"
+                  className="bg-white rounded-lg shadow-sm border border-slate-300 max-h-[38vh] overflow-y-auto text-[11px] space-y-3 font-sans transition-all"
                   style={{
-                    padding: `${Math.max(10, printMarginTop * 1.5)}px ${Math.max(12, printMarginLeft * 1.5)}px ${Math.max(10, printMarginBottom * 1.5)}px ${Math.max(12, printMarginLeft * 1.5)}px`
+                    padding: `${Math.max(10, printMarginTop * 1.5)}px ${Math.max(12, printMarginLeft * 1.5)}px ${Math.max(10, printMarginBottom * 1.5)}px ${Math.max(12, printMarginLeft * 1.5)}px`,
+                    zoom: `${printScale}%`,
                   }}
                 >
                   {/* Preview Header */}
@@ -5842,15 +5896,15 @@ export default function App() {
                       <div className="font-bold text-xs text-black">■ BCP　非常災害用備蓄品一覧 ({printableStockpiles.length}品目)</div>
                       <table className="w-full border-collapse text-[10px] border-2 border-black table-fixed bg-white">
                         <thead>
-                          <tr className="bg-[#fef9c3] border-b-2 border-black">
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "4%" }}>No</th>
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "5%" }} title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
-                            <th className="p-1.5 border border-black font-bold text-left text-black" style={{ width: "32%" }}>品目（備蓄品名）</th>
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "8%" }}>現在量</th>
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "8%" }}>必要量</th>
-                            <th className="p-1.5 border border-black text-left text-black font-bold" style={{ width: "14%" }}>保管場所</th>
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "7%" }}>状況</th>
-                            <th className="p-1.5 border border-black text-left text-black font-bold" style={{ width: "22%" }}>備考</th>
+                          <tr className="bg-white border-b-2 border-black">
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "4%" }}>No</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "5%" }} title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
+                            <th className="p-1.5 border border-black font-bold text-left text-black bg-white" style={{ width: "32%" }}>品目（備蓄品名）</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "8%" }}>現在量</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "8%" }}>必要量</th>
+                            <th className="p-1.5 border border-black text-left text-black font-bold bg-white" style={{ width: "14%" }}>保管場所</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "7%" }}>状況</th>
+                            <th className="p-1.5 border border-black text-left text-black font-bold bg-white" style={{ width: "22%" }}>備考</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -5897,16 +5951,16 @@ export default function App() {
                       <div className="font-bold text-xs text-black">■ 利用者販売用商品マスタ ({printableProducts.length}品目)</div>
                       <table className="w-full border-collapse text-[10px] border-2 border-black table-fixed bg-white">
                         <thead>
-                          <tr className="bg-[#fef9c3] border-b-2 border-black">
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "4%" }}>No</th>
-                            <th className="p-1.5 border border-black text-black font-bold text-left" style={{ width: "14%" }}>カテゴリー</th>
-                            <th className="p-1.5 border border-black text-black font-bold text-left" style={{ width: "12%" }}>メーカー</th>
-                            <th className="p-1.5 border border-black text-black font-bold text-left" style={{ width: "30%" }}>商品名</th>
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "8%" }}>現在庫</th>
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "7%" }}>容量</th>
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "7%" }}>サイズ</th>
-                            <th className="p-1.5 border border-black text-right text-black font-bold" style={{ width: "10%" }}>販売単価</th>
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "8%" }}>状況</th>
+                          <tr className="bg-white border-b-2 border-black">
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "4%" }}>No</th>
+                            <th className="p-1.5 border border-black text-black font-bold text-left bg-white" style={{ width: "14%" }}>カテゴリー</th>
+                            <th className="p-1.5 border border-black text-black font-bold text-left bg-white" style={{ width: "12%" }}>メーカー</th>
+                            <th className="p-1.5 border border-black text-black font-bold text-left bg-white" style={{ width: "30%" }}>商品名</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "8%" }}>現在庫</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "7%" }}>容量</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "7%" }}>サイズ</th>
+                            <th className="p-1.5 border border-black text-right text-black font-bold bg-white" style={{ width: "10%" }}>販売単価</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "8%" }}>状況</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -5937,15 +5991,15 @@ export default function App() {
                       <div className="font-bold text-xs text-black">■ 出庫記録台帳 ({printableHistory.length}件)</div>
                       <table className="w-full border-collapse text-[10px] border-2 border-black table-fixed bg-white">
                         <thead>
-                          <tr className="bg-[#fef9c3] border-b-2 border-black">
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "4%" }}>No</th>
-                            <th className="p-1.5 border border-black text-black font-bold" style={{ width: "9%" }}>区分</th>
-                            <th className="p-1.5 border border-black text-black font-bold" style={{ width: "14%" }}>出庫日時</th>
-                            <th className="p-1.5 border border-black text-black font-bold" style={{ width: "16%" }}>宛名・出庫先</th>
-                            <th className="p-1.5 border border-black text-black font-bold" style={{ width: "28%" }}>商品名・品目</th>
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "8%" }}>数量</th>
-                            <th className="p-1.5 border border-black text-black font-bold" style={{ width: "11%" }}>担当者</th>
-                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "10%" }}>請求月</th>
+                          <tr className="bg-white border-b-2 border-black">
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "4%" }}>No</th>
+                            <th className="p-1.5 border border-black text-black font-bold bg-white" style={{ width: "9%" }}>区分</th>
+                            <th className="p-1.5 border border-black text-black font-bold bg-white" style={{ width: "14%" }}>出庫日時</th>
+                            <th className="p-1.5 border border-black text-black font-bold bg-white" style={{ width: "16%" }}>宛名・出庫先</th>
+                            <th className="p-1.5 border border-black text-black font-bold bg-white" style={{ width: "28%" }}>商品名・品目</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "8%" }}>数量</th>
+                            <th className="p-1.5 border border-black text-black font-bold bg-white" style={{ width: "11%" }}>担当者</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold bg-white" style={{ width: "10%" }}>請求月</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -6012,18 +6066,52 @@ export default function App() {
         Dedicated A4 Print / PDF Document Layout
         Hidden on screen via @media screen, visible only during window.print()
         ========================================================================= */}
-    <div id="printable-inventory-area" className={`print-density-${printDensity}`}>
+    <div
+      id="printable-inventory-area"
+      className={`print-density-${printDensity}`}
+      style={{
+        boxSizing: "border-box",
+        paddingTop: `${printMarginTop}mm`,
+        paddingBottom: `${printMarginBottom}mm`,
+        paddingLeft: `${printMarginLeft}mm`,
+        paddingRight: `${printMarginRight}mm`,
+        zoom: `${printScale}%`,
+        background: "#ffffff",
+        width: "100%",
+        maxWidth: "100%",
+      }}
+    >
       <style>{`
         @media print {
           @page {
             size: A4 ${printOrientation};
-            margin: ${printMarginTop}mm ${printMarginRight}mm ${printMarginBottom}mm ${printMarginLeft}mm;
+            margin: 0mm;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          #printable-inventory-area {
+            display: block !important;
+            visibility: visible !important;
+            box-sizing: border-box !important;
+            padding-top: ${printMarginTop}mm !important;
+            padding-bottom: ${printMarginBottom}mm !important;
+            padding-left: ${printMarginLeft}mm !important;
+            padding-right: ${printMarginRight}mm !important;
+            zoom: ${printScale}% !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            background: #ffffff !important;
           }
         }
       `}</style>
 
       {/* Document Header */}
-      <div style={{ borderBottom: "2px solid #000000", paddingBottom: "8px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", breakInside: "avoid", pageBreakInside: "avoid", background: "#ffffff" }}>
+      <div style={{ borderBottom: "1.5px solid #000000", paddingBottom: "8px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", breakInside: "avoid", pageBreakInside: "avoid", background: "#ffffff" }}>
         <div>
           <div style={{ paddingLeft: "2.2em" }}>
             <div style={{ fontSize: "10pt", fontWeight: "bold", color: "#000000" }}>桃の郷　京都東山</div>
@@ -6047,19 +6135,19 @@ export default function App() {
         {printIncludeStamp && (
           <div style={{ display: "flex", border: "1.5px solid #000000", fontSize: "8.5pt", textAlign: "center", background: "#ffffff", breakInside: "avoid", pageBreakInside: "avoid" }}>
             <div style={{ borderRight: "1px solid #000000", width: "58px", background: "#ffffff" }}>
-              <div style={{ background: "#fef9c3", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>施設長</div>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>施設長</div>
               <div style={{ height: "38px", background: "#ffffff" }}></div>
             </div>
             <div style={{ borderRight: "1px solid #000000", width: "58px", background: "#ffffff" }}>
-              <div style={{ background: "#fef9c3", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>管理者</div>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>管理者</div>
               <div style={{ height: "38px", background: "#ffffff" }}></div>
             </div>
             <div style={{ borderRight: "1px solid #000000", width: "58px", background: "#ffffff" }}>
-              <div style={{ background: "#fef9c3", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>衛生管理</div>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>衛生管理</div>
               <div style={{ height: "38px", background: "#ffffff" }}></div>
             </div>
             <div style={{ width: "58px", background: "#ffffff" }}>
-              <div style={{ background: "#fef9c3", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>担当者</div>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>担当者</div>
               <div style={{ height: "38px", background: "#ffffff" }}></div>
             </div>
           </div>
@@ -6072,17 +6160,17 @@ export default function App() {
           <div className="print-section-header" style={{ fontSize: "11pt", fontWeight: "bold", color: "#000000", marginBottom: "6px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ BCP　非常災害用備蓄品一覧 ({printableStockpiles.length}品目)
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", tableLayout: "fixed", boxSizing: "border-box", breakInside: "auto", pageBreakInside: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1.5px solid #000000", tableLayout: "fixed", boxSizing: "border-box", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
-              <tr style={{ background: "#fef9c3" }}>
-                <th style={{ width: "4%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>No</th>
-                <th style={{ width: "5%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }} title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
-                <th style={{ width: "32%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 8px" }}>品目（備蓄品名）</th>
-                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>現在量</th>
-                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>必要量</th>
-                <th style={{ width: "14%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>保管場所</th>
-                <th style={{ width: "7%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>状況</th>
-                <th style={{ width: "22%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 8px" }}>備考</th>
+              <tr style={{ background: "#ffffff" }}>
+                <th style={{ width: "4%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>No</th>
+                <th style={{ width: "5%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }} title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
+                <th style={{ width: "32%", textAlign: "left", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 8px" }}>品目（備蓄品名）</th>
+                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>現在量</th>
+                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>必要量</th>
+                <th style={{ width: "14%", textAlign: "left", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 6px" }}>保管場所</th>
+                <th style={{ width: "7%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>状況</th>
+                <th style={{ width: "22%", textAlign: "left", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 8px" }}>備考</th>
               </tr>
             </thead>
             <tbody>
@@ -6126,18 +6214,18 @@ export default function App() {
           <div className="print-section-header" style={{ fontSize: "11pt", fontWeight: "bold", color: "#000000", marginBottom: "6px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ 【利用者販売用】衛生商品・おむつ類マスタ一覧 ({printableProducts.length}品目)
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", tableLayout: "fixed", boxSizing: "border-box", breakInside: "auto", pageBreakInside: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1.5px solid #000000", tableLayout: "fixed", boxSizing: "border-box", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
-              <tr style={{ background: "#fef9c3" }}>
-                <th style={{ width: "4%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>No</th>
-                <th style={{ width: "14%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>カテゴリー</th>
-                <th style={{ width: "12%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>メーカー</th>
-                <th style={{ width: "30%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 8px" }}>商品名（パッケージ名）</th>
-                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>現在庫数</th>
-                <th style={{ width: "7%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>容量</th>
-                <th style={{ width: "7%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>サイズ</th>
-                <th style={{ width: "10%", textAlign: "right", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>販売単価(税込)</th>
-                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>状況</th>
+              <tr style={{ background: "#ffffff" }}>
+                <th style={{ width: "4%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>No</th>
+                <th style={{ width: "14%", textAlign: "left", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 6px" }}>カテゴリー</th>
+                <th style={{ width: "12%", textAlign: "left", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 6px" }}>メーカー</th>
+                <th style={{ width: "30%", textAlign: "left", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 8px" }}>商品名（パッケージ名）</th>
+                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>現在庫数</th>
+                <th style={{ width: "7%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>容量</th>
+                <th style={{ width: "7%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>サイズ</th>
+                <th style={{ width: "10%", textAlign: "right", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 6px" }}>販売単価(税込)</th>
+                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>状況</th>
               </tr>
             </thead>
             <tbody>
@@ -6172,17 +6260,17 @@ export default function App() {
           <div className="print-section-header" style={{ fontSize: "11pt", fontWeight: "bold", color: "#000000", marginBottom: "6px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ 出庫記録台帳（出庫履歴総合管理台帳）({printableHistory.length}件)
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", tableLayout: "fixed", boxSizing: "border-box", breakInside: "auto", pageBreakInside: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1.5px solid #000000", tableLayout: "fixed", boxSizing: "border-box", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
-              <tr style={{ background: "#fef9c3" }}>
-                <th style={{ width: "4%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>No</th>
-                <th style={{ width: "9%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>出庫区分</th>
-                <th style={{ width: "14%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>出庫日時</th>
-                <th style={{ width: "16%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>出庫先・対象者</th>
-                <th style={{ width: "28%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 8px" }}>品目名・商品規格</th>
-                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>出庫数量</th>
-                <th style={{ width: "11%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>出庫担当者</th>
-                <th style={{ width: "10%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>請求月</th>
+              <tr style={{ background: "#ffffff" }}>
+                <th style={{ width: "4%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>No</th>
+                <th style={{ width: "9%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>出庫区分</th>
+                <th style={{ width: "14%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>出庫日時</th>
+                <th style={{ width: "16%", textAlign: "left", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 6px" }}>宛名・出庫先</th>
+                <th style={{ width: "28%", textAlign: "left", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 8px" }}>品目名・商品規格</th>
+                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>出庫数量</th>
+                <th style={{ width: "11%", textAlign: "left", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 6px" }}>出庫担当者</th>
+                <th style={{ width: "10%", textAlign: "center", border: "1px solid #000000", borderBottom: "1.5px solid #000000", color: "#000000", background: "#ffffff", padding: "7px 4px" }}>請求月</th>
               </tr>
             </thead>
             <tbody>
