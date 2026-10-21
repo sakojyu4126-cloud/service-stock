@@ -5804,11 +5804,11 @@ export default function App() {
                   }}
                 >
                   {/* Preview Header */}
-                  <div className="border-b-2 border-slate-800 pb-2 flex items-start justify-between">
+                  <div className="border-b-2 border-slate-800 pb-2 flex items-start justify-between bg-white">
                     <div>
-                      <div className="text-[10px] text-slate-600 font-bold">社会福祉法人 桃の郷 京都東山</div>
-                      <h4 className="text-sm font-extrabold text-slate-900">
-                        {printTarget === "bcp" ? "【施設・非常災害用】BCP備蓄品・衛生消耗品 在庫管理一覧表"
+                      <div className="text-[10px] text-slate-600 font-bold">桃の郷　京都東山</div>
+                      <h4 className="text-sm font-extrabold text-slate-900" style={{ paddingLeft: "2em" }}>
+                        {printTarget === "bcp" ? "BCP　非常災害用備蓄品一覧"
                           : printTarget === "diaper" ? "【利用者販売用】衛生商品・おむつ類 在庫管理一覧表"
                           : "衛生用品＆備蓄資材 在庫管理総合一覧表"}
                       </h4>
@@ -5817,10 +5817,10 @@ export default function App() {
                       </div>
                     </div>
                     {printIncludeStamp && (
-                      <div className="flex border border-slate-400 text-[9px] text-center">
-                        <div className="border-r border-slate-400 w-12 py-0.5 bg-slate-50 font-bold">施設長</div>
-                        <div className="border-r border-slate-400 w-12 py-0.5 bg-slate-50 font-bold">管理者</div>
-                        <div className="w-12 py-0.5 bg-slate-50 font-bold">担当者</div>
+                      <div className="flex border border-slate-400 text-[9px] text-center bg-white">
+                        <div className="border-r border-slate-400 w-12 py-0.5 bg-white font-bold">施設長</div>
+                        <div className="border-r border-slate-400 w-12 py-0.5 bg-white font-bold">管理者</div>
+                        <div className="w-12 py-0.5 bg-white font-bold">担当者</div>
                       </div>
                     )}
                   </div>
@@ -5828,10 +5828,10 @@ export default function App() {
                   {/* Preview Tables */}
                   {(printTarget === "bcp" || printTarget === "all") && (
                     <div className="space-y-1">
-                      <div className="font-bold text-xs text-blue-900">■ BCP非常災害用備蓄品 ({printableStockpiles.length}品目)</div>
+                      <div className="font-bold text-xs text-blue-900">■ BCP　非常災害用備蓄品一覧 ({printableStockpiles.length}品目)</div>
                       <table className="w-full border-collapse text-[10px]">
                         <thead>
-                          <tr className="bg-slate-100 border border-slate-300">
+                          <tr className="bg-white border border-slate-300">
                             <th className="p-1 border border-slate-300 text-center w-7">No</th>
                             <th className="p-1 border border-slate-300 text-center w-8" title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
                             <th className="p-1 border border-slate-300 font-bold text-left min-w-[160px]">品目（備蓄品名）</th>
@@ -5999,11 +5999,11 @@ export default function App() {
       `}</style>
 
       {/* Document Header */}
-      <div style={{ borderBottom: "2px solid #0f172a", paddingBottom: "6px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", breakInside: "avoid", pageBreakInside: "avoid" }}>
+      <div style={{ borderBottom: "2px solid #0f172a", paddingBottom: "6px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", breakInside: "avoid", pageBreakInside: "avoid", background: "#ffffff" }}>
         <div>
-          <div style={{ fontSize: "9pt", fontWeight: "bold", color: "#475569" }}>社会福祉法人 桃の郷 京都東山</div>
-          <h1 style={{ fontSize: "15pt", fontWeight: "900", color: "#0f172a", margin: "2px 0 4px 0" }}>
-            {printTarget === "bcp" ? "【施設・非常災害用】BCP備蓄品・衛生消耗品 在庫管理一覧表"
+          <div style={{ fontSize: "9pt", fontWeight: "bold", color: "#334155" }}>桃の郷　京都東山</div>
+          <h1 style={{ fontSize: "15pt", fontWeight: "900", color: "#0f172a", margin: "2px 0 4px 0", paddingLeft: "2em" }}>
+            {printTarget === "bcp" ? "BCP　非常災害用備蓄品一覧"
               : printTarget === "diaper" ? "【利用者販売用】衛生商品・おむつ類 在庫管理一覧表"
               : printTarget === "history" ? "【出庫記録】物品・備品・衛生用品 出庫履歴総合管理台帳"
               : "衛生用品＆備蓄資材 在庫管理総合一覧表"}
@@ -6019,22 +6019,22 @@ export default function App() {
         </div>
 
         {printIncludeStamp && (
-          <div style={{ display: "flex", border: "1px solid #475569", fontSize: "8pt", textAlign: "center", breakInside: "avoid", pageBreakInside: "avoid" }}>
-            <div style={{ borderRight: "1px solid #475569", width: "55px" }}>
-              <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>施設長</div>
-              <div style={{ height: "36px" }}></div>
+          <div style={{ display: "flex", border: "1px solid #475569", fontSize: "8pt", textAlign: "center", background: "#ffffff", breakInside: "avoid", pageBreakInside: "avoid" }}>
+            <div style={{ borderRight: "1px solid #475569", width: "55px", background: "#ffffff" }}>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>施設長</div>
+              <div style={{ height: "36px", background: "#ffffff" }}></div>
             </div>
-            <div style={{ borderRight: "1px solid #475569", width: "55px" }}>
-              <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>管理者</div>
-              <div style={{ height: "36px" }}></div>
+            <div style={{ borderRight: "1px solid #475569", width: "55px", background: "#ffffff" }}>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>管理者</div>
+              <div style={{ height: "36px", background: "#ffffff" }}></div>
             </div>
-            <div style={{ borderRight: "1px solid #475569", width: "55px" }}>
-              <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>衛生管理</div>
-              <div style={{ height: "36px" }}></div>
+            <div style={{ borderRight: "1px solid #475569", width: "55px", background: "#ffffff" }}>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>衛生管理</div>
+              <div style={{ height: "36px", background: "#ffffff" }}></div>
             </div>
-            <div style={{ width: "55px" }}>
-              <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>担当者</div>
-              <div style={{ height: "36px" }}></div>
+            <div style={{ width: "55px", background: "#ffffff" }}>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>担当者</div>
+              <div style={{ height: "36px", background: "#ffffff" }}></div>
             </div>
           </div>
         )}
@@ -6042,9 +6042,9 @@ export default function App() {
 
       {/* BCP Table */}
       {(printTarget === "bcp" || printTarget === "all") && (
-        <div style={{ marginBottom: printTarget === "all" ? "14px" : "0", breakInside: "auto", pageBreakInside: "auto" }}>
+        <div style={{ marginBottom: printTarget === "all" ? "14px" : "0", breakInside: "auto", pageBreakInside: "auto", background: "#ffffff" }}>
           <div className="print-section-header" style={{ fontSize: "10.5pt", fontWeight: "bold", color: "#1e3a8a", marginBottom: "4px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
-            ■ 【施設・非常災害用】BCP備蓄品・衛生消耗品リスト ({printableStockpiles.length}品目)
+            ■ BCP　非常災害用備蓄品一覧 ({printableStockpiles.length}品目)
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
@@ -6174,8 +6174,8 @@ export default function App() {
       )}
 
       {/* Print Document Footer */}
-      <div style={{ marginTop: "12px", borderTop: "1px solid #cbd5e1", paddingTop: "4px", display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b" }}>
-        <div>社会福祉法人 桃の郷 京都東山 衛生用品＆備蓄 在庫管理システム</div>
+      <div style={{ marginTop: "12px", borderTop: "1px solid #cbd5e1", paddingTop: "4px", display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b", background: "#ffffff" }}>
+        <div>桃の郷　京都東山 衛生用品＆備蓄 在庫管理システム</div>
         <div>出力日: {new Date().toLocaleDateString("ja-JP")}</div>
       </div>
     </div>
