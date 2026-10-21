@@ -262,10 +262,10 @@ export default function App() {
   const [printOrientation, setPrintOrientation] = useState<"landscape" | "portrait">("landscape");
   const [printDensity, setPrintDensity] = useState<"normal" | "compact" | "spacious">("normal");
   const [printMarginPreset, setPrintMarginPreset] = useState<"standard" | "narrow" | "wide" | "custom">("standard");
-  const [printMarginTop, setPrintMarginTop] = useState<number>(8);
-  const [printMarginBottom, setPrintMarginBottom] = useState<number>(8);
-  const [printMarginLeft, setPrintMarginLeft] = useState<number>(8);
-  const [printMarginRight, setPrintMarginRight] = useState<number>(8);
+  const [printMarginTop, setPrintMarginTop] = useState<number>(15);
+  const [printMarginBottom, setPrintMarginBottom] = useState<number>(15);
+  const [printMarginLeft, setPrintMarginLeft] = useState<number>(15);
+  const [printMarginRight, setPrintMarginRight] = useState<number>(15);
 
   const formatCategoryBadge = (category: string) => {
     if (!category) return "①";
@@ -5674,52 +5674,52 @@ export default function App() {
                         type="button"
                         onClick={() => {
                           setPrintMarginPreset("standard");
-                          setPrintMarginTop(8);
-                          setPrintMarginBottom(8);
-                          setPrintMarginLeft(8);
-                          setPrintMarginRight(8);
+                          setPrintMarginTop(15);
+                          setPrintMarginBottom(15);
+                          setPrintMarginLeft(15);
+                          setPrintMarginRight(15);
                         }}
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
-                          printMarginTop === 8 && printMarginLeft === 8
+                        className={`px-2.5 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                          printMarginTop === 15 && printMarginLeft === 15
                             ? "bg-indigo-600 text-white border-indigo-600"
                             : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
                         }`}
                       >
-                        標準 (8mm)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPrintMarginPreset("narrow");
-                          setPrintMarginTop(5);
-                          setPrintMarginBottom(5);
-                          setPrintMarginLeft(5);
-                          setPrintMarginRight(5);
-                        }}
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
-                          printMarginTop === 5 && printMarginLeft === 5
-                            ? "bg-indigo-600 text-white border-indigo-600"
-                            : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
-                        }`}
-                      >
-                        狭い・最大幅 (5mm)
+                        標準（おすすめ 15mm）
                       </button>
                       <button
                         type="button"
                         onClick={() => {
                           setPrintMarginPreset("wide");
-                          setPrintMarginTop(12);
-                          setPrintMarginBottom(12);
-                          setPrintMarginLeft(12);
-                          setPrintMarginRight(12);
+                          setPrintMarginTop(20);
+                          setPrintMarginBottom(20);
+                          setPrintMarginLeft(20);
+                          setPrintMarginRight(20);
                         }}
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
-                          printMarginTop === 12 && printMarginLeft === 12
+                        className={`px-2.5 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                          printMarginTop === 20 && printMarginLeft === 20
                             ? "bg-indigo-600 text-white border-indigo-600"
                             : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
                         }`}
                       >
-                        ゆったり・綴じ代 (12mm)
+                        広め・余白十分 (20mm)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrintMarginPreset("narrow");
+                          setPrintMarginTop(10);
+                          setPrintMarginBottom(10);
+                          setPrintMarginLeft(10);
+                          setPrintMarginRight(10);
+                        }}
+                        className={`px-2.5 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                          printMarginTop === 10 && printMarginLeft === 10
+                            ? "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                        }`}
+                      >
+                        控えめ (10mm)
                       </button>
                     </div>
                   </div>
@@ -5840,32 +5840,32 @@ export default function App() {
                   {(printTarget === "bcp" || printTarget === "all") && (
                     <div className="space-y-1">
                       <div className="font-bold text-xs text-black">■ BCP　非常災害用備蓄品一覧 ({printableStockpiles.length}品目)</div>
-                      <table className="w-full border-collapse text-[10px] border border-black">
+                      <table className="w-full border-collapse text-[10px] border-2 border-black table-fixed bg-white">
                         <thead>
-                          <tr className="bg-white border-b border-black">
-                            <th className="p-1 border border-black text-center w-7 text-black font-bold">No</th>
-                            <th className="p-1 border border-black text-center w-8 text-black font-bold" title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
-                            <th className="p-1 border border-black font-bold text-left min-w-[150px] text-black">品目（備蓄品名）</th>
-                            <th className="p-1 border border-black text-center w-12 text-black font-bold">現在量</th>
-                            <th className="p-1 border border-black text-center w-12 text-black font-bold">必要量</th>
-                            <th className="p-1 border border-black text-left w-28 min-w-[95px] text-black font-bold">保管場所</th>
-                            <th className="p-1 border border-black text-center w-12 text-black font-bold">状況</th>
-                            <th className="p-1 border border-black text-left min-w-[150px] text-black font-bold">備考</th>
+                          <tr className="bg-[#fef9c3] border-b-2 border-black">
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "4%" }}>No</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "5%" }} title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
+                            <th className="p-1.5 border border-black font-bold text-left text-black" style={{ width: "32%" }}>品目（備蓄品名）</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "8%" }}>現在量</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "8%" }}>必要量</th>
+                            <th className="p-1.5 border border-black text-left text-black font-bold" style={{ width: "14%" }}>保管場所</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "7%" }}>状況</th>
+                            <th className="p-1.5 border border-black text-left text-black font-bold" style={{ width: "22%" }}>備考</th>
                           </tr>
                         </thead>
                         <tbody>
                           {printableStockpiles.slice(0, 15).map((s, idx) => (
                             <tr key={s.id} className="border-b border-black">
-                              <td className="p-1 border border-black text-center text-black">{idx + 1}</td>
-                              <td className="p-1 border border-black text-center font-bold text-black text-xs">
+                              <td className="p-1.5 border border-black text-center text-black">{idx + 1}</td>
+                              <td className="p-1.5 border border-black text-center font-bold text-black text-xs">
                                 {formatCategoryBadge(s.category)}
                               </td>
-                              <td className="p-1 border border-black font-bold text-black">{s.name}</td>
-                              <td className="p-1 border border-black text-center font-bold whitespace-nowrap text-black">
+                              <td className="p-1.5 border border-black font-bold text-black truncate">{s.name}</td>
+                              <td className="p-1.5 border border-black text-center font-bold whitespace-nowrap text-black">
                                 {s.currentStock} {s.unit}
                               </td>
-                              <td className="p-1 border border-black text-center whitespace-nowrap text-black">{s.requiredStock} {s.unit}</td>
-                              <td className="p-1 border border-black whitespace-nowrap overflow-hidden text-black">
+                              <td className="p-1.5 border border-black text-center whitespace-nowrap text-black">{s.requiredStock} {s.unit}</td>
+                              <td className="p-1.5 border border-black whitespace-nowrap overflow-hidden text-black">
                                 <span
                                   className="inline-block whitespace-nowrap"
                                   style={{
@@ -5876,10 +5876,10 @@ export default function App() {
                                   {s.location}
                                 </span>
                               </td>
-                              <td className="p-1 border border-black text-center font-bold whitespace-nowrap text-black">
+                              <td className="p-1.5 border border-black text-center font-bold whitespace-nowrap text-black">
                                 {s.currentStock <= 1 ? "要補充" : "適正"}
                               </td>
-                              <td className="p-1 border border-black text-black">{s.notes || "-"}</td>
+                              <td className="p-1.5 border border-black text-black truncate">{s.notes || "-"}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -5895,34 +5895,34 @@ export default function App() {
                   {(printTarget === "diaper" || printTarget === "all") && (
                     <div className="space-y-1 pt-2">
                       <div className="font-bold text-xs text-black">■ 利用者販売用商品マスタ ({printableProducts.length}品目)</div>
-                      <table className="w-full border-collapse text-[10px] border border-black">
+                      <table className="w-full border-collapse text-[10px] border-2 border-black table-fixed bg-white">
                         <thead>
-                          <tr className="bg-white border-b border-black">
-                            <th className="p-1 border border-black text-center w-8 text-black font-bold">No</th>
-                            <th className="p-1 border border-black text-black font-bold">カテゴリー</th>
-                            <th className="p-1 border border-black text-black font-bold">メーカー</th>
-                            <th className="p-1 border border-black text-black font-bold">商品名</th>
-                            <th className="p-1 border border-black text-center text-black font-bold">現在庫</th>
-                            <th className="p-1 border border-black text-center text-black font-bold">容量</th>
-                            <th className="p-1 border border-black text-center text-black font-bold">サイズ</th>
-                            <th className="p-1 border border-black text-right text-black font-bold">販売単価(税込)</th>
-                            <th className="p-1 border border-black text-center text-black font-bold">状況</th>
+                          <tr className="bg-[#fef9c3] border-b-2 border-black">
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "4%" }}>No</th>
+                            <th className="p-1.5 border border-black text-black font-bold text-left" style={{ width: "14%" }}>カテゴリー</th>
+                            <th className="p-1.5 border border-black text-black font-bold text-left" style={{ width: "12%" }}>メーカー</th>
+                            <th className="p-1.5 border border-black text-black font-bold text-left" style={{ width: "30%" }}>商品名</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "8%" }}>現在庫</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "7%" }}>容量</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "7%" }}>サイズ</th>
+                            <th className="p-1.5 border border-black text-right text-black font-bold" style={{ width: "10%" }}>販売単価</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "8%" }}>状況</th>
                           </tr>
                         </thead>
                         <tbody>
                           {printableProducts.slice(0, 15).map((p, idx) => (
                             <tr key={p.id} className="border-b border-black">
-                              <td className="p-1 border border-black text-center text-black">{idx + 1}</td>
-                              <td className="p-1 border border-black text-black">{p.category}</td>
-                              <td className="p-1 border border-black text-black">{p.maker}</td>
-                              <td className="p-1 border border-black font-bold text-black">{p.name}</td>
-                              <td className="p-1 border border-black text-center font-bold text-black">
+                              <td className="p-1.5 border border-black text-center text-black">{idx + 1}</td>
+                              <td className="p-1.5 border border-black text-black truncate">{p.category}</td>
+                              <td className="p-1.5 border border-black text-black truncate">{p.maker}</td>
+                              <td className="p-1.5 border border-black font-bold text-black truncate">{p.name}</td>
+                              <td className="p-1.5 border border-black text-center font-bold text-black">
                                 {p.currentStock ?? 0} 個
                               </td>
-                              <td className="p-1 border border-black text-center text-black">{p.capacity}</td>
-                              <td className="p-1 border border-black text-center text-black">{p.size}</td>
-                              <td className="p-1 border border-black text-right font-mono text-black">¥{p.sellingPrice.toLocaleString()}</td>
-                              <td className="p-1 border border-black text-center font-bold text-black">
+                              <td className="p-1.5 border border-black text-center text-black">{p.capacity}</td>
+                              <td className="p-1.5 border border-black text-center text-black">{p.size}</td>
+                              <td className="p-1.5 border border-black text-right font-mono text-black">¥{p.sellingPrice.toLocaleString()}</td>
+                              <td className="p-1.5 border border-black text-center font-bold text-black">
                                 {(p.currentStock ?? 0) === 0 ? "在庫切" : (p.currentStock ?? 0) <= 2 ? "僅少" : "適正"}
                               </td>
                             </tr>
@@ -5935,30 +5935,32 @@ export default function App() {
                   {printTarget === "history" && (
                     <div className="space-y-1 pt-2">
                       <div className="font-bold text-xs text-black">■ 出庫記録台帳 ({printableHistory.length}件)</div>
-                      <table className="w-full border-collapse text-[10px] border border-black">
+                      <table className="w-full border-collapse text-[10px] border-2 border-black table-fixed bg-white">
                         <thead>
-                          <tr className="bg-white border-b border-black">
-                            <th className="p-1 border border-black text-center w-8 text-black font-bold">No</th>
-                            <th className="p-1 border border-black text-black font-bold">区分</th>
-                            <th className="p-1 border border-black text-black font-bold">出庫日時</th>
-                            <th className="p-1 border border-black text-black font-bold">宛名・出庫先</th>
-                            <th className="p-1 border border-black text-black font-bold">商品名・品目</th>
-                            <th className="p-1 border border-black text-center text-black font-bold">数量</th>
-                            <th className="p-1 border border-black text-black font-bold">担当者</th>
+                          <tr className="bg-[#fef9c3] border-b-2 border-black">
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "4%" }}>No</th>
+                            <th className="p-1.5 border border-black text-black font-bold" style={{ width: "9%" }}>区分</th>
+                            <th className="p-1.5 border border-black text-black font-bold" style={{ width: "14%" }}>出庫日時</th>
+                            <th className="p-1.5 border border-black text-black font-bold" style={{ width: "16%" }}>宛名・出庫先</th>
+                            <th className="p-1.5 border border-black text-black font-bold" style={{ width: "28%" }}>商品名・品目</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "8%" }}>数量</th>
+                            <th className="p-1.5 border border-black text-black font-bold" style={{ width: "11%" }}>担当者</th>
+                            <th className="p-1.5 border border-black text-center text-black font-bold" style={{ width: "10%" }}>請求月</th>
                           </tr>
                         </thead>
                         <tbody>
                           {printableHistory.slice(0, 15).map((r, idx) => (
                             <tr key={`${r.kind}-${r.id}`} className="border-b border-black">
-                              <td className="p-1 border border-black text-center text-black">{idx + 1}</td>
-                              <td className="p-1 border border-black font-bold text-black">
+                              <td className="p-1.5 border border-black text-center text-black">{idx + 1}</td>
+                              <td className="p-1.5 border border-black font-bold text-black">
                                 {r.kind === "user" ? "利用者" : "施設"}
                               </td>
-                              <td className="p-1 border border-black font-mono text-black">{r.date}</td>
-                              <td className="p-1 border border-black font-bold text-black">{r.targetName}</td>
-                              <td className="p-1 border border-black text-black">{r.itemName}</td>
-                              <td className="p-1 border border-black text-center font-bold text-black">{r.quantity} {r.unit}</td>
-                              <td className="p-1 border border-black text-black">{r.staffName || "-"}</td>
+                              <td className="p-1.5 border border-black font-mono text-black">{r.date}</td>
+                              <td className="p-1.5 border border-black font-bold text-black truncate">{r.targetName}</td>
+                              <td className="p-1.5 border border-black text-black truncate">{r.itemName}</td>
+                              <td className="p-1.5 border border-black text-center font-bold text-black">{r.quantity} {r.unit}</td>
+                              <td className="p-1.5 border border-black text-black truncate">{r.staffName || "-"}</td>
+                              <td className="p-1.5 border border-black text-center text-black">{r.billingMonth || "-"}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -6021,18 +6023,18 @@ export default function App() {
       `}</style>
 
       {/* Document Header */}
-      <div style={{ borderBottom: "1.5px solid #000000", paddingBottom: "6px", marginBottom: "10px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", breakInside: "avoid", pageBreakInside: "avoid", background: "#ffffff" }}>
+      <div style={{ borderBottom: "2px solid #000000", paddingBottom: "8px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", breakInside: "avoid", pageBreakInside: "avoid", background: "#ffffff" }}>
         <div>
           <div style={{ paddingLeft: "2.2em" }}>
-            <div style={{ fontSize: "9.5pt", fontWeight: "bold", color: "#000000" }}>桃の郷　京都東山</div>
-            <h1 style={{ fontSize: "16pt", fontWeight: "900", color: "#000000", margin: "2px 0 4px 0" }}>
+            <div style={{ fontSize: "10pt", fontWeight: "bold", color: "#000000" }}>桃の郷　京都東山</div>
+            <h1 style={{ fontSize: "17pt", fontWeight: "900", color: "#000000", margin: "2px 0 6px 0", letterSpacing: "0.02em" }}>
               {printTarget === "bcp" ? "BCP　非常災害用備蓄品一覧"
                 : printTarget === "diaper" ? "【利用者販売用】衛生商品・おむつ類 在庫管理一覧表"
                 : printTarget === "history" ? "【出庫記録】物品・備品・衛生用品 出庫履歴総合管理台帳"
                 : "衛生用品＆備蓄資材 在庫管理総合一覧表"}
             </h1>
           </div>
-          <div style={{ fontSize: "8.5pt", color: "#333333" }}>
+          <div style={{ fontSize: "9pt", color: "#333333" }}>
             出力日時: {new Date().toLocaleString("ja-JP")} ｜ 発行管理者: 管理者 ｜ 対象件数: {
               printTarget === "bcp" ? `${printableStockpiles.length}品目`
               : printTarget === "diaper" ? `${printableProducts.length}品目`
@@ -6043,22 +6045,22 @@ export default function App() {
         </div>
 
         {printIncludeStamp && (
-          <div style={{ display: "flex", border: "1px solid #000000", fontSize: "8pt", textAlign: "center", background: "#ffffff", breakInside: "avoid", pageBreakInside: "avoid" }}>
-            <div style={{ borderRight: "1px solid #000000", width: "55px", background: "#ffffff" }}>
-              <div style={{ background: "#ffffff", borderBottom: "1px solid #000000", padding: "2px 0", fontWeight: "bold", color: "#000000" }}>施設長</div>
-              <div style={{ height: "36px", background: "#ffffff" }}></div>
+          <div style={{ display: "flex", border: "1.5px solid #000000", fontSize: "8.5pt", textAlign: "center", background: "#ffffff", breakInside: "avoid", pageBreakInside: "avoid" }}>
+            <div style={{ borderRight: "1px solid #000000", width: "58px", background: "#ffffff" }}>
+              <div style={{ background: "#fef9c3", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>施設長</div>
+              <div style={{ height: "38px", background: "#ffffff" }}></div>
             </div>
-            <div style={{ borderRight: "1px solid #000000", width: "55px", background: "#ffffff" }}>
-              <div style={{ background: "#ffffff", borderBottom: "1px solid #000000", padding: "2px 0", fontWeight: "bold", color: "#000000" }}>管理者</div>
-              <div style={{ height: "36px", background: "#ffffff" }}></div>
+            <div style={{ borderRight: "1px solid #000000", width: "58px", background: "#ffffff" }}>
+              <div style={{ background: "#fef9c3", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>管理者</div>
+              <div style={{ height: "38px", background: "#ffffff" }}></div>
             </div>
-            <div style={{ borderRight: "1px solid #000000", width: "55px", background: "#ffffff" }}>
-              <div style={{ background: "#ffffff", borderBottom: "1px solid #000000", padding: "2px 0", fontWeight: "bold", color: "#000000" }}>衛生管理</div>
-              <div style={{ height: "36px", background: "#ffffff" }}></div>
+            <div style={{ borderRight: "1px solid #000000", width: "58px", background: "#ffffff" }}>
+              <div style={{ background: "#fef9c3", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>衛生管理</div>
+              <div style={{ height: "38px", background: "#ffffff" }}></div>
             </div>
-            <div style={{ width: "55px", background: "#ffffff" }}>
-              <div style={{ background: "#ffffff", borderBottom: "1px solid #000000", padding: "2px 0", fontWeight: "bold", color: "#000000" }}>担当者</div>
-              <div style={{ height: "36px", background: "#ffffff" }}></div>
+            <div style={{ width: "58px", background: "#ffffff" }}>
+              <div style={{ background: "#fef9c3", borderBottom: "1px solid #000000", padding: "3px 0", fontWeight: "bold", color: "#000000" }}>担当者</div>
+              <div style={{ height: "38px", background: "#ffffff" }}></div>
             </div>
           </div>
         )}
@@ -6066,36 +6068,36 @@ export default function App() {
 
       {/* BCP Table */}
       {(printTarget === "bcp" || printTarget === "all") && (
-        <div style={{ marginBottom: printTarget === "all" ? "14px" : "0", breakInside: "auto", pageBreakInside: "auto", background: "#ffffff" }}>
-          <div className="print-section-header" style={{ fontSize: "11pt", fontWeight: "bold", color: "#000000", marginBottom: "4px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
+        <div style={{ marginBottom: printTarget === "all" ? "16px" : "0", breakInside: "auto", pageBreakInside: "auto", background: "#ffffff" }}>
+          <div className="print-section-header" style={{ fontSize: "11pt", fontWeight: "bold", color: "#000000", marginBottom: "6px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ BCP　非常災害用備蓄品一覧 ({printableStockpiles.length}品目)
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #000000", breakInside: "auto", pageBreakInside: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", tableLayout: "fixed", boxSizing: "border-box", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
-              <tr style={{ background: "#ffffff" }}>
-                <th style={{ width: "26px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>No</th>
-                <th style={{ width: "36px", textAlign: "center", border: "1px solid #000000", color: "#000000" }} title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
-                <th style={{ width: "280px", minWidth: "200px", textAlign: "left", border: "1px solid #000000", color: "#000000" }}>品目（備蓄品名）</th>
-                <th style={{ width: "55px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>現在量</th>
-                <th style={{ width: "55px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>必要量</th>
-                <th style={{ width: "105px", minWidth: "95px", textAlign: "left", border: "1px solid #000000", color: "#000000" }}>保管場所</th>
-                <th style={{ width: "48px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>状況</th>
-                <th style={{ minWidth: "190px", textAlign: "left", border: "1px solid #000000", color: "#000000" }}>備考</th>
+              <tr style={{ background: "#fef9c3" }}>
+                <th style={{ width: "4%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>No</th>
+                <th style={{ width: "5%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }} title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
+                <th style={{ width: "32%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 8px" }}>品目（備蓄品名）</th>
+                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>現在量</th>
+                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>必要量</th>
+                <th style={{ width: "14%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>保管場所</th>
+                <th style={{ width: "7%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>状況</th>
+                <th style={{ width: "22%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 8px" }}>備考</th>
               </tr>
             </thead>
             <tbody>
               {printableStockpiles.map((s, idx) => (
                 <tr key={s.id} style={{ background: "#ffffff" }}>
-                  <td style={{ textAlign: "center", border: "1px solid #000000", color: "#000000" }}>{idx + 1}</td>
-                  <td style={{ textAlign: "center", fontWeight: "bold", fontSize: "10pt", color: "#000000", border: "1px solid #000000" }}>
+                  <td style={{ textAlign: "center", border: "1px solid #000000", color: "#000000", padding: "6.5px 4px" }}>{idx + 1}</td>
+                  <td style={{ textAlign: "center", fontWeight: "bold", fontSize: "10pt", color: "#000000", border: "1px solid #000000", padding: "6.5px 4px" }}>
                     {formatCategoryBadge(s.category)}
                   </td>
-                  <td style={{ fontWeight: "bold", fontSize: "9pt", color: "#000000", border: "1px solid #000000" }}>{s.name}</td>
-                  <td style={{ textAlign: "center", fontWeight: "bold", fontSize: "8.5pt", whiteSpace: "nowrap", color: "#000000", border: "1px solid #000000" }}>
+                  <td style={{ fontWeight: "bold", fontSize: "9pt", color: "#000000", border: "1px solid #000000", padding: "6.5px 8px" }}>{s.name}</td>
+                  <td style={{ textAlign: "center", fontWeight: "bold", fontSize: "8.5pt", whiteSpace: "nowrap", color: "#000000", border: "1px solid #000000", padding: "6.5px 4px" }}>
                     {s.currentStock} {s.unit}
                   </td>
-                  <td style={{ textAlign: "center", fontSize: "8.5pt", whiteSpace: "nowrap", color: "#000000", border: "1px solid #000000" }}>{s.requiredStock} {s.unit}</td>
-                  <td className="print-no-wrap cell-location" style={{ whiteSpace: "nowrap", overflow: "hidden", lineHeight: 1.15, padding: "4.5px 5px", color: "#000000", border: "1px solid #000000" }}>
+                  <td style={{ textAlign: "center", fontSize: "8.5pt", whiteSpace: "nowrap", color: "#000000", border: "1px solid #000000", padding: "6.5px 4px" }}>{s.requiredStock} {s.unit}</td>
+                  <td className="print-no-wrap cell-location" style={{ whiteSpace: "nowrap", overflow: "hidden", lineHeight: 1.2, padding: "6.5px 6px", color: "#000000", border: "1px solid #000000" }}>
                     <span
                       style={{
                         display: "inline-block",
@@ -6107,10 +6109,10 @@ export default function App() {
                       {s.location}
                     </span>
                   </td>
-                  <td style={{ textAlign: "center", fontWeight: "bold", fontSize: "8pt", whiteSpace: "nowrap", color: "#000000", border: "1px solid #000000" }}>
+                  <td style={{ textAlign: "center", fontWeight: "bold", fontSize: "8.5pt", whiteSpace: "nowrap", color: "#000000", border: "1px solid #000000", padding: "6.5px 4px" }}>
                     {s.currentStock <= 1 ? "要補充" : "適正"}
                   </td>
-                  <td style={{ fontSize: "8pt", color: "#000000", border: "1px solid #000000" }}>{s.notes || "-"}</td>
+                  <td style={{ fontSize: "8pt", color: "#000000", border: "1px solid #000000", padding: "6.5px 8px" }}>{s.notes || "-"}</td>
                 </tr>
               ))}
             </tbody>
@@ -6121,21 +6123,21 @@ export default function App() {
       {/* Diaper / Products Table */}
       {(printTarget === "diaper" || printTarget === "all") && (
         <div className={printTarget === "all" ? "print-page-break" : ""} style={{ breakInside: "auto", pageBreakInside: "auto" }}>
-          <div className="print-section-header" style={{ fontSize: "11pt", fontWeight: "bold", color: "#000000", marginBottom: "4px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
+          <div className="print-section-header" style={{ fontSize: "11pt", fontWeight: "bold", color: "#000000", marginBottom: "6px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ 【利用者販売用】衛生商品・おむつ類マスタ一覧 ({printableProducts.length}品目)
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #000000", breakInside: "auto", pageBreakInside: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", tableLayout: "fixed", boxSizing: "border-box", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
-              <tr style={{ background: "#ffffff" }}>
-                <th style={{ width: "30px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>No</th>
-                <th style={{ width: "120px", border: "1px solid #000000", color: "#000000" }}>カテゴリー</th>
-                <th style={{ width: "85px", border: "1px solid #000000", color: "#000000" }}>メーカー</th>
-                <th style={{ border: "1px solid #000000", color: "#000000" }}>商品名（パッケージ名）</th>
-                <th style={{ width: "85px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>現在庫数</th>
-                <th style={{ width: "65px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>容量</th>
-                <th style={{ width: "65px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>サイズ</th>
-                <th style={{ width: "85px", textAlign: "right", border: "1px solid #000000", color: "#000000" }}>販売単価(税込)</th>
-                <th style={{ width: "80px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>状況</th>
+              <tr style={{ background: "#fef9c3" }}>
+                <th style={{ width: "4%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>No</th>
+                <th style={{ width: "14%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>カテゴリー</th>
+                <th style={{ width: "12%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>メーカー</th>
+                <th style={{ width: "30%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 8px" }}>商品名（パッケージ名）</th>
+                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>現在庫数</th>
+                <th style={{ width: "7%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>容量</th>
+                <th style={{ width: "7%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>サイズ</th>
+                <th style={{ width: "10%", textAlign: "right", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>販売単価(税込)</th>
+                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>状況</th>
               </tr>
             </thead>
             <tbody>
@@ -6143,17 +6145,17 @@ export default function App() {
                 const stockVal = p.currentStock ?? 0;
                 return (
                   <tr key={p.id} style={{ background: "#ffffff" }}>
-                    <td style={{ textAlign: "center", border: "1px solid #000000", color: "#000000" }}>{idx + 1}</td>
-                    <td style={{ fontSize: "8pt", border: "1px solid #000000", color: "#000000" }}>{p.category}</td>
-                    <td style={{ border: "1px solid #000000", color: "#000000" }}>{p.maker}</td>
-                    <td style={{ fontWeight: "bold", border: "1px solid #000000", color: "#000000" }}>{p.name}</td>
-                    <td style={{ textAlign: "center", fontWeight: "bold", border: "1px solid #000000", color: "#000000" }}>
+                    <td style={{ textAlign: "center", border: "1px solid #000000", color: "#000000", padding: "6.5px 4px" }}>{idx + 1}</td>
+                    <td style={{ fontSize: "8pt", border: "1px solid #000000", color: "#000000", padding: "6.5px 6px" }}>{p.category}</td>
+                    <td style={{ border: "1px solid #000000", color: "#000000", padding: "6.5px 6px" }}>{p.maker}</td>
+                    <td style={{ fontWeight: "bold", border: "1px solid #000000", color: "#000000", padding: "6.5px 8px" }}>{p.name}</td>
+                    <td style={{ textAlign: "center", fontWeight: "bold", border: "1px solid #000000", color: "#000000", padding: "6.5px 4px" }}>
                       {stockVal} 個
                     </td>
-                    <td style={{ textAlign: "center", border: "1px solid #000000", color: "#000000" }}>{p.capacity}</td>
-                    <td style={{ textAlign: "center", border: "1px solid #000000", color: "#000000" }}>{p.size}</td>
-                    <td style={{ textAlign: "right", border: "1px solid #000000", color: "#000000" }}>¥{p.sellingPrice.toLocaleString()}</td>
-                    <td style={{ textAlign: "center", fontWeight: "bold", border: "1px solid #000000", color: "#000000" }}>
+                    <td style={{ textAlign: "center", border: "1px solid #000000", color: "#000000", padding: "6.5px 4px" }}>{p.capacity}</td>
+                    <td style={{ textAlign: "center", border: "1px solid #000000", color: "#000000", padding: "6.5px 4px" }}>{p.size}</td>
+                    <td style={{ textAlign: "right", border: "1px solid #000000", color: "#000000", padding: "6.5px 6px" }}>¥{p.sellingPrice.toLocaleString()}</td>
+                    <td style={{ textAlign: "center", fontWeight: "bold", border: "1px solid #000000", color: "#000000", padding: "6.5px 4px" }}>
                       {stockVal === 0 ? "在庫切" : stockVal <= 2 ? "僅少" : "適正"}
                     </td>
                   </tr>
@@ -6167,40 +6169,40 @@ export default function App() {
       {/* History Records Table in Printable Layout */}
       {printTarget === "history" && (
         <div style={{ breakInside: "auto", pageBreakInside: "auto" }}>
-          <div className="print-section-header" style={{ fontSize: "11pt", fontWeight: "bold", color: "#000000", marginBottom: "4px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
+          <div className="print-section-header" style={{ fontSize: "11pt", fontWeight: "bold", color: "#000000", marginBottom: "6px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ 出庫記録台帳（出庫履歴総合管理台帳）({printableHistory.length}件)
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #000000", breakInside: "auto", pageBreakInside: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", tableLayout: "fixed", boxSizing: "border-box", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
-              <tr style={{ background: "#ffffff" }}>
-                <th style={{ width: "30px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>No</th>
-                <th style={{ width: "85px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>出庫区分</th>
-                <th style={{ width: "110px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>出庫日時</th>
-                <th style={{ width: "130px", border: "1px solid #000000", color: "#000000" }}>出庫先・対象者</th>
-                <th style={{ border: "1px solid #000000", color: "#000000" }}>品目名・商品規格</th>
-                <th style={{ width: "70px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>出庫数量</th>
-                <th style={{ width: "95px", border: "1px solid #000000", color: "#000000" }}>出庫担当者</th>
-                <th style={{ width: "80px", textAlign: "center", border: "1px solid #000000", color: "#000000" }}>請求月</th>
+              <tr style={{ background: "#fef9c3" }}>
+                <th style={{ width: "4%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>No</th>
+                <th style={{ width: "9%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>出庫区分</th>
+                <th style={{ width: "14%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>出庫日時</th>
+                <th style={{ width: "16%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>出庫先・対象者</th>
+                <th style={{ width: "28%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 8px" }}>品目名・商品規格</th>
+                <th style={{ width: "8%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>出庫数量</th>
+                <th style={{ width: "11%", textAlign: "left", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 6px" }}>出庫担当者</th>
+                <th style={{ width: "10%", textAlign: "center", border: "1px solid #000000", borderBottom: "2px solid #000000", color: "#000000", background: "#fef9c3", padding: "7px 4px" }}>請求月</th>
               </tr>
             </thead>
             <tbody>
               {printableHistory.map((r, idx) => (
                 <tr key={`${r.kind}-${r.id}`} style={{ background: "#ffffff" }}>
-                  <td style={{ textAlign: "center", border: "1px solid #000000", color: "#000000" }}>{idx + 1}</td>
-                  <td style={{ textAlign: "center", fontSize: "8pt", fontWeight: "bold", border: "1px solid #000000", color: "#000000" }}>
+                  <td style={{ textAlign: "center", border: "1px solid #000000", color: "#000000", padding: "6.5px 4px" }}>{idx + 1}</td>
+                  <td style={{ textAlign: "center", fontSize: "8.5pt", fontWeight: "bold", border: "1px solid #000000", color: "#000000", padding: "6.5px 4px" }}>
                     {r.kind === "user" ? "利用者販売" : "施設・BCP"}
                   </td>
-                  <td style={{ textAlign: "center", fontSize: "8pt", fontFamily: "monospace", border: "1px solid #000000", color: "#000000" }}>{r.date}</td>
-                  <td style={{ fontWeight: "bold", border: "1px solid #000000", color: "#000000" }}>{r.targetName}</td>
-                  <td style={{ border: "1px solid #000000", color: "#000000" }}>
+                  <td style={{ textAlign: "center", fontSize: "8pt", fontFamily: "monospace", border: "1px solid #000000", color: "#000000", padding: "6.5px 4px" }}>{r.date}</td>
+                  <td style={{ fontWeight: "bold", border: "1px solid #000000", color: "#000000", padding: "6.5px 6px" }}>{r.targetName}</td>
+                  <td style={{ border: "1px solid #000000", color: "#000000", padding: "6.5px 8px" }}>
                     <div style={{ fontWeight: "bold" }}>{r.itemName}</div>
                     {r.category && <div style={{ fontSize: "7.5pt", color: "#333333" }}>{r.category}</div>}
                   </td>
-                  <td style={{ textAlign: "center", fontWeight: "bold", fontFamily: "monospace", border: "1px solid #000000", color: "#000000" }}>
+                  <td style={{ textAlign: "center", fontWeight: "bold", fontFamily: "monospace", border: "1px solid #000000", color: "#000000", padding: "6.5px 4px" }}>
                     {r.quantity} {r.unit}
                   </td>
-                  <td style={{ border: "1px solid #000000", color: "#000000" }}>{r.staffName || "-"}</td>
-                  <td style={{ textAlign: "center", fontSize: "8pt", border: "1px solid #000000", color: "#000000" }}>{r.billingMonth || "-"}</td>
+                  <td style={{ border: "1px solid #000000", color: "#000000", padding: "6.5px 6px" }}>{r.staffName || "-"}</td>
+                  <td style={{ textAlign: "center", fontSize: "8pt", border: "1px solid #000000", color: "#000000", padding: "6.5px 4px" }}>{r.billingMonth || "-"}</td>
                 </tr>
               ))}
             </tbody>
@@ -6209,7 +6211,7 @@ export default function App() {
       )}
 
       {/* Print Document Footer */}
-      <div style={{ marginTop: "12px", borderTop: "1px solid #000000", paddingTop: "4px", display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#333333", background: "#ffffff" }}>
+      <div style={{ marginTop: "14px", borderTop: "1.5px solid #000000", paddingTop: "5px", display: "flex", justifyContent: "space-between", fontSize: "8pt", color: "#333333", background: "#ffffff" }}>
         <div>桃の郷　京都東山 衛生用品＆備蓄 在庫管理システム</div>
         <div>出力日: {new Date().toLocaleDateString("ja-JP")}</div>
       </div>
