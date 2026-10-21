@@ -277,6 +277,15 @@ export default function App() {
     return m ? m[0] : "①";
   };
 
+  const getLocationFontSize = (loc: string) => {
+    if (!loc) return "8pt";
+    const len = loc.length;
+    if (len <= 4) return "8pt";
+    if (len <= 6) return "7.5pt";
+    if (len <= 8) return "7pt";
+    return "6.5pt";
+  };
+
   // Form States - Helper Withdrawal (Dynamic autocomplete)
   const [userInput, setUserInput] = useState("");
   const [showUserSuggestions, setShowUserSuggestions] = useState(false);
@@ -5804,22 +5813,24 @@ export default function App() {
                   }}
                 >
                   {/* Preview Header */}
-                  <div className="border-b-2 border-slate-800 pb-2 flex items-start justify-between bg-white">
+                  <div className="border-b border-slate-300 pb-2 flex items-start justify-between bg-white">
                     <div>
-                      <div className="text-[10px] text-slate-600 font-bold">桃の郷　京都東山</div>
-                      <h4 className="text-sm font-extrabold text-slate-900" style={{ paddingLeft: "2em" }}>
-                        {printTarget === "bcp" ? "BCP　非常災害用備蓄品一覧"
-                          : printTarget === "diaper" ? "【利用者販売用】衛生商品・おむつ類 在庫管理一覧表"
-                          : "衛生用品＆備蓄資材 在庫管理総合一覧表"}
-                      </h4>
+                      <div style={{ paddingLeft: "2.2em" }}>
+                        <div className="text-[10px] text-slate-600 font-bold">桃の郷　京都東山</div>
+                        <h4 className="text-sm font-extrabold text-slate-900">
+                          {printTarget === "bcp" ? "BCP　非常災害用備蓄品一覧"
+                            : printTarget === "diaper" ? "【利用者販売用】衛生商品・おむつ類 在庫管理一覧表"
+                            : "衛生用品＆備蓄資材 在庫管理総合一覧表"}
+                        </h4>
+                      </div>
                       <div className="text-[10px] text-slate-500 mt-0.5">
                         出力日時: {new Date().toLocaleString("ja-JP")} / 発行責任者: 管理者
                       </div>
                     </div>
                     {printIncludeStamp && (
-                      <div className="flex border border-slate-400 text-[9px] text-center bg-white">
-                        <div className="border-r border-slate-400 w-12 py-0.5 bg-white font-bold">施設長</div>
-                        <div className="border-r border-slate-400 w-12 py-0.5 bg-white font-bold">管理者</div>
+                      <div className="flex border border-slate-300 text-[9px] text-center bg-white">
+                        <div className="border-r border-slate-300 w-12 py-0.5 bg-white font-bold">施設長</div>
+                        <div className="border-r border-slate-300 w-12 py-0.5 bg-white font-bold">管理者</div>
                         <div className="w-12 py-0.5 bg-white font-bold">担当者</div>
                       </div>
                     )}
@@ -5829,15 +5840,15 @@ export default function App() {
                   {(printTarget === "bcp" || printTarget === "all") && (
                     <div className="space-y-1">
                       <div className="font-bold text-xs text-blue-900">■ BCP　非常災害用備蓄品一覧 ({printableStockpiles.length}品目)</div>
-                      <table className="w-full border-collapse text-[10px]">
+                      <table className="w-full border-collapse text-[10px] border border-slate-300">
                         <thead>
                           <tr className="bg-white border border-slate-300">
                             <th className="p-1 border border-slate-300 text-center w-7">No</th>
                             <th className="p-1 border border-slate-300 text-center w-8" title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
-                            <th className="p-1 border border-slate-300 font-bold text-left min-w-[160px]">品目（備蓄品名）</th>
+                            <th className="p-1 border border-slate-300 font-bold text-left min-w-[150px]">品目（備蓄品名）</th>
                             <th className="p-1 border border-slate-300 text-center w-12">現在量</th>
                             <th className="p-1 border border-slate-300 text-center w-12">必要量</th>
-                            <th className="p-1 border border-slate-300 text-left w-20">保管場所</th>
+                            <th className="p-1 border border-slate-300 text-left w-28 min-w-[95px]">保管場所</th>
                             <th className="p-1 border border-slate-300 text-center w-12">状況</th>
                             <th className="p-1 border border-slate-300 text-left min-w-[150px]">備考 (広幅)</th>
                           </tr>
@@ -5854,7 +5865,17 @@ export default function App() {
                                 {s.currentStock} {s.unit}
                               </td>
                               <td className="p-1 border border-slate-200 text-center whitespace-nowrap">{s.requiredStock} {s.unit}</td>
-                              <td className="p-1 border border-slate-200 truncate max-w-[90px]">{s.location}</td>
+                              <td className="p-1 border border-slate-200 whitespace-nowrap overflow-hidden">
+                                <span
+                                  className="inline-block whitespace-nowrap"
+                                  style={{
+                                    fontSize: getLocationFontSize(s.location),
+                                    letterSpacing: s.location && s.location.length >= 6 ? "-0.02em" : "normal"
+                                  }}
+                                >
+                                  {s.location}
+                                </span>
+                              </td>
                               <td className="p-1 border border-slate-200 text-center font-bold whitespace-nowrap">
                                 {s.currentStock <= 1 ? <span className="text-rose-600">要補充</span> : <span className="text-emerald-700">適正</span>}
                               </td>
@@ -5874,7 +5895,7 @@ export default function App() {
                   {(printTarget === "diaper" || printTarget === "all") && (
                     <div className="space-y-1 pt-2">
                       <div className="font-bold text-xs text-teal-900">■ 利用者販売用商品マスタ ({printableProducts.length}品目)</div>
-                      <table className="w-full border-collapse text-[10px]">
+                      <table className="w-full border-collapse text-[10px] border border-slate-300">
                         <thead>
                           <tr className="bg-slate-100 border border-slate-300">
                             <th className="p-1 border border-slate-300 text-center w-8">No</th>
@@ -5914,7 +5935,7 @@ export default function App() {
                   {printTarget === "history" && (
                     <div className="space-y-1 pt-2">
                       <div className="font-bold text-xs text-amber-900">■ 出庫記録台帳 ({printableHistory.length}件)</div>
-                      <table className="w-full border-collapse text-[10px]">
+                      <table className="w-full border-collapse text-[10px] border border-slate-300">
                         <thead>
                           <tr className="bg-slate-100 border border-slate-300">
                             <th className="p-1 border border-slate-300 text-center w-8">No</th>
@@ -5999,15 +6020,17 @@ export default function App() {
       `}</style>
 
       {/* Document Header */}
-      <div style={{ borderBottom: "2px solid #0f172a", paddingBottom: "6px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", breakInside: "avoid", pageBreakInside: "avoid", background: "#ffffff" }}>
+      <div style={{ borderBottom: "1px solid #cbd5e1", paddingBottom: "6px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", breakInside: "avoid", pageBreakInside: "avoid", background: "#ffffff" }}>
         <div>
-          <div style={{ fontSize: "9pt", fontWeight: "bold", color: "#334155" }}>桃の郷　京都東山</div>
-          <h1 style={{ fontSize: "15pt", fontWeight: "900", color: "#0f172a", margin: "2px 0 4px 0", paddingLeft: "2em" }}>
-            {printTarget === "bcp" ? "BCP　非常災害用備蓄品一覧"
-              : printTarget === "diaper" ? "【利用者販売用】衛生商品・おむつ類 在庫管理一覧表"
-              : printTarget === "history" ? "【出庫記録】物品・備品・衛生用品 出庫履歴総合管理台帳"
-              : "衛生用品＆備蓄資材 在庫管理総合一覧表"}
-          </h1>
+          <div style={{ paddingLeft: "2.2em" }}>
+            <div style={{ fontSize: "9.5pt", fontWeight: "bold", color: "#334155" }}>桃の郷　京都東山</div>
+            <h1 style={{ fontSize: "15pt", fontWeight: "900", color: "#0f172a", margin: "2px 0 4px 0" }}>
+              {printTarget === "bcp" ? "BCP　非常災害用備蓄品一覧"
+                : printTarget === "diaper" ? "【利用者販売用】衛生商品・おむつ類 在庫管理一覧表"
+                : printTarget === "history" ? "【出庫記録】物品・備品・衛生用品 出庫履歴総合管理台帳"
+                : "衛生用品＆備蓄資材 在庫管理総合一覧表"}
+            </h1>
+          </div>
           <div style={{ fontSize: "8.5pt", color: "#475569" }}>
             出力日時: {new Date().toLocaleString("ja-JP")} ｜ 発行管理者: 管理者 ｜ 対象件数: {
               printTarget === "bcp" ? `${printableStockpiles.length}品目`
@@ -6019,21 +6042,21 @@ export default function App() {
         </div>
 
         {printIncludeStamp && (
-          <div style={{ display: "flex", border: "1px solid #475569", fontSize: "8pt", textAlign: "center", background: "#ffffff", breakInside: "avoid", pageBreakInside: "avoid" }}>
-            <div style={{ borderRight: "1px solid #475569", width: "55px", background: "#ffffff" }}>
-              <div style={{ background: "#ffffff", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>施設長</div>
+          <div style={{ display: "flex", border: "1px solid #cbd5e1", fontSize: "8pt", textAlign: "center", background: "#ffffff", breakInside: "avoid", pageBreakInside: "avoid" }}>
+            <div style={{ borderRight: "1px solid #cbd5e1", width: "55px", background: "#ffffff" }}>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #cbd5e1", padding: "2px 0", fontWeight: "bold" }}>施設長</div>
               <div style={{ height: "36px", background: "#ffffff" }}></div>
             </div>
-            <div style={{ borderRight: "1px solid #475569", width: "55px", background: "#ffffff" }}>
-              <div style={{ background: "#ffffff", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>管理者</div>
+            <div style={{ borderRight: "1px solid #cbd5e1", width: "55px", background: "#ffffff" }}>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #cbd5e1", padding: "2px 0", fontWeight: "bold" }}>管理者</div>
               <div style={{ height: "36px", background: "#ffffff" }}></div>
             </div>
-            <div style={{ borderRight: "1px solid #475569", width: "55px", background: "#ffffff" }}>
-              <div style={{ background: "#ffffff", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>衛生管理</div>
+            <div style={{ borderRight: "1px solid #cbd5e1", width: "55px", background: "#ffffff" }}>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #cbd5e1", padding: "2px 0", fontWeight: "bold" }}>衛生管理</div>
               <div style={{ height: "36px", background: "#ffffff" }}></div>
             </div>
             <div style={{ width: "55px", background: "#ffffff" }}>
-              <div style={{ background: "#ffffff", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>担当者</div>
+              <div style={{ background: "#ffffff", borderBottom: "1px solid #cbd5e1", padding: "2px 0", fontWeight: "bold" }}>担当者</div>
               <div style={{ height: "36px", background: "#ffffff" }}></div>
             </div>
           </div>
@@ -6046,17 +6069,17 @@ export default function App() {
           <div className="print-section-header" style={{ fontSize: "10.5pt", fontWeight: "bold", color: "#1e3a8a", marginBottom: "4px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ BCP　非常災害用備蓄品一覧 ({printableStockpiles.length}品目)
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", breakInside: "auto", pageBreakInside: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #cbd5e1", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
               <tr>
                 <th style={{ width: "26px", textAlign: "center" }}>No</th>
                 <th style={{ width: "36px", textAlign: "center" }} title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
-                <th style={{ width: "325px", minWidth: "225px" }}>品目（備蓄品名）</th>
+                <th style={{ width: "280px", minWidth: "200px" }}>品目（備蓄品名）</th>
                 <th style={{ width: "55px", textAlign: "center" }}>現在量</th>
                 <th style={{ width: "55px", textAlign: "center" }}>必要量</th>
-                <th style={{ width: "90px" }}>保管場所</th>
+                <th style={{ width: "105px", minWidth: "95px" }}>保管場所</th>
                 <th style={{ width: "48px", textAlign: "center" }}>状況</th>
-                <th style={{ minWidth: "200px" }}>備考</th>
+                <th style={{ minWidth: "190px" }}>備考</th>
               </tr>
             </thead>
             <tbody>
@@ -6071,7 +6094,18 @@ export default function App() {
                     {s.currentStock} {s.unit}
                   </td>
                   <td style={{ textAlign: "center", fontSize: "8.5pt", whiteSpace: "nowrap" }}>{s.requiredStock} {s.unit}</td>
-                  <td>{s.location}</td>
+                  <td className="print-no-wrap cell-location" style={{ whiteSpace: "nowrap", overflow: "hidden", lineHeight: 1.15, padding: "3px 4px" }}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        whiteSpace: "nowrap",
+                        fontSize: getLocationFontSize(s.location),
+                        letterSpacing: s.location && s.location.length >= 6 ? "-0.02em" : "normal"
+                      }}
+                    >
+                      {s.location}
+                    </span>
+                  </td>
                   <td style={{ textAlign: "center", fontWeight: "bold", fontSize: "8pt", whiteSpace: "nowrap", color: s.currentStock <= 1 ? "#dc2626" : "#166534" }}>
                     {s.currentStock <= 1 ? "要補充" : "適正"}
                   </td>
@@ -6089,7 +6123,7 @@ export default function App() {
           <div className="print-section-header" style={{ fontSize: "10.5pt", fontWeight: "bold", color: "#115e59", marginBottom: "4px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ 【利用者販売用】衛生商品・おむつ類マスタ一覧 ({printableProducts.length}品目)
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", breakInside: "auto", pageBreakInside: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #cbd5e1", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
               <tr>
                 <th style={{ width: "30px", textAlign: "center" }}>No</th>
@@ -6135,7 +6169,7 @@ export default function App() {
           <div className="print-section-header" style={{ fontSize: "10.5pt", fontWeight: "bold", color: "#b45309", marginBottom: "4px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ 出庫記録台帳（スマホ出庫①利用者販売 ＆ スマホ出庫②施設・BCP出庫 統合管理）({printableHistory.length}件)
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", breakInside: "auto", pageBreakInside: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #cbd5e1", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
               <tr>
                 <th style={{ width: "30px", textAlign: "center" }}>No</th>

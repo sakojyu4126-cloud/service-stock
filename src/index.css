@@ -93,17 +93,19 @@
   table {
     width: 100% !important;
     border-collapse: collapse !important;
+    border: 1px solid #cbd5e1 !important;
     margin-top: 4px !important;
     margin-bottom: 10px !important;
     page-break-inside: auto !important;
     break-inside: auto !important;
+    background: #ffffff !important;
   }
 
   th, td {
-    border: 1px solid #475569 !important;
-    padding: 4px 6px !important;
-    font-size: 8.5pt !important;
-    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 3.5px 5px !important;
+    font-size: 8.5pt;
+    color: #1e293b !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     background-color: #ffffff !important;
@@ -115,6 +117,14 @@
     background: #ffffff !important;
     font-weight: 700 !important;
     text-align: center !important;
+    color: #334155 !important;
+  }
+
+  .print-no-wrap,
+  .cell-location {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow: hidden !important;
   }
 
   thead {
@@ -135,14 +145,14 @@
   #printable-inventory-area.print-density-compact table th,
   #printable-inventory-area.print-density-compact table td {
     padding: 2.5px 4px !important;
-    font-size: 7.5pt !important;
+    font-size: 7.5pt;
     line-height: 1.15 !important;
   }
 
   #printable-inventory-area.print-density-spacious table th,
   #printable-inventory-area.print-density-spacious table td {
-    padding: 6px 8px !important;
-    font-size: 9.5pt !important;
+    padding: 5px 7px !important;
+    font-size: 9.5pt;
     line-height: 1.35 !important;
   }
 }
