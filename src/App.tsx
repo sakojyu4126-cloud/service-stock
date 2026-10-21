@@ -259,6 +259,8 @@ export default function App() {
   const [printTarget, setPrintTarget] = useState<"bcp" | "diaper" | "history" | "all">("bcp");
   const [printFilter, setPrintFilter] = useState<"all" | "alert" | "filtered">("all");
   const [printIncludeStamp, setPrintIncludeStamp] = useState(true);
+  const [printOrientation, setPrintOrientation] = useState<"landscape" | "portrait">("landscape");
+  const [printDensity, setPrintDensity] = useState<"normal" | "compact" | "spacious">("normal");
 
   // Form States - Helper Withdrawal (Dynamic autocomplete)
   const [userInput, setUserInput] = useState("");
@@ -5573,54 +5575,88 @@ export default function App() {
               </div>
 
               {/* Options Section */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
-                {/* 1. Target Selection */}
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700">① 出力する一覧表:</label>
-                  <select
-                    value={printTarget}
-                    onChange={(e) => setPrintTarget(e.target.value as any)}
-                    className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                  >
-                    <option value="bcp">BCP非常災害用備蓄資材 ({stockpiles.length}品目)</option>
-                    <option value="diaper">利用者販売用商品マスタ ({products.length}品目)</option>
-                    <option value="all">★ 両方をまとめて総合出力 ({stockpiles.length + products.length}品目)</option>
-                    <option value="history">📋 出庫記録台帳（①利用者 ＆ ②施設・BCP統合） ({printableHistory.length}件)</option>
-                  </select>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* 1. Target Selection */}
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">① 出力する一覧表:</label>
+                    <select
+                      value={printTarget}
+                      onChange={(e) => setPrintTarget(e.target.value as any)}
+                      className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                    >
+                      <option value="bcp">BCP非常災害用備蓄資材 ({stockpiles.length}品目)</option>
+                      <option value="diaper">利用者販売用商品マスタ ({products.length}品目)</option>
+                      <option value="all">★ 両方をまとめて総合出力 ({stockpiles.length + products.length}品目)</option>
+                      <option value="history">📋 出庫記録台帳（①利用者 ＆ ②施設・BCP統合） ({printableHistory.length}件)</option>
+                    </select>
+                  </div>
+
+                  {/* 2. Scope Filter */}
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">② 出力範囲・絞り込み:</label>
+                    <select
+                      value={printFilter}
+                      onChange={(e) => setPrintFilter(e.target.value as any)}
+                      className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                    >
+                      <option value="all">全品目を出力</option>
+                      <option value="alert">⚠️ 在庫僅少・要発注品のみ</option>
+                      <option value="filtered">現在の画面の絞り込み/検索結果を出力</option>
+                    </select>
+                  </div>
+
+                  {/* 3. Orientation Selection */}
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">③ 用紙の向き:</label>
+                    <select
+                      value={printOrientation}
+                      onChange={(e) => setPrintOrientation(e.target.value as any)}
+                      className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                    >
+                      <option value="landscape">A4 横向き（推奨・全項目が綺麗に並びます）</option>
+                      <option value="portrait">A4 縦向き（縦長・1枚の行数を増やしたい場合）</option>
+                    </select>
+                  </div>
+
+                  {/* 4. Density Selection */}
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">④ 文字サイズ・行密度:</label>
+                    <select
+                      value={printDensity}
+                      onChange={(e) => setPrintDensity(e.target.value as any)}
+                      className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                    >
+                      <option value="normal">標準（おすすめ・バランス良い8.5pt）</option>
+                      <option value="compact">コンパクト（7.5pt・1枚に多く収まり用紙節約）</option>
+                      <option value="spacious">ゆったり（9.5pt・文字が大きく見やすい）</option>
+                    </select>
+                  </div>
                 </div>
 
-                {/* 2. Scope Filter */}
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700">② 出力範囲・絞り込み:</label>
-                  <select
-                    value={printFilter}
-                    onChange={(e) => setPrintFilter(e.target.value as any)}
-                    className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                  >
-                    <option value="all">全品目を出力</option>
-                    <option value="alert">⚠️ 在庫僅少・要発注品のみ</option>
-                    <option value="filtered">現在の画面の絞り込み/検索結果を出力</option>
-                  </select>
-                </div>
-
-                {/* 3. Stamp Box Checkbox */}
-                <div className="space-y-1 flex flex-col justify-end">
-                  <label className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white cursor-pointer select-none font-semibold text-slate-700">
+                <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                  {/* 5. Stamp Box Checkbox */}
+                  <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white cursor-pointer select-none font-semibold text-slate-700 hover:bg-slate-50 transition">
                     <input
                       type="checkbox"
                       checked={printIncludeStamp}
                       onChange={(e) => setPrintIncludeStamp(e.target.checked)}
                       className="rounded text-indigo-600 focus:ring-indigo-500"
                     />
-                    <span>検印欄（施設長・管理者枠）を表示</span>
+                    <span>検印欄（施設長・管理者・担当者枠）を印字する</span>
                   </label>
+
+                  {/* Clarification Tag */}
+                  <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md">
+                    ✓ 1枚目のタイトル直後から表が配置され、複数ページにまたがっても項目名が自動で引き継がれます
+                  </span>
                 </div>
               </div>
 
               {/* Document Live Preview Box */}
               <div className="border border-slate-300 rounded-xl overflow-hidden shadow-inner bg-slate-100 p-3">
                 <div className="text-[11px] font-bold text-slate-500 mb-2 flex items-center justify-between">
-                  <span>📄 帳票プレビュー（A4横向き・印字イメージ）:</span>
+                  <span>📄 帳票プレビュー（A4{printOrientation === "landscape" ? "横向き" : "縦向き"}・印字イメージ）:</span>
                   <span>対象品目数: {
                     printTarget === "bcp" ? printableStockpiles.length
                     : printTarget === "diaper" ? printableProducts.length
@@ -5812,12 +5848,21 @@ export default function App() {
         Dedicated A4 Print / PDF Document Layout
         Hidden on screen via @media screen, visible only during window.print()
         ========================================================================= */}
-    <div id="printable-inventory-area">
+    <div id="printable-inventory-area" className={`print-density-${printDensity}`}>
+      <style>{`
+        @media print {
+          @page {
+            size: A4 ${printOrientation};
+            margin: 8mm 8mm 10mm 8mm;
+          }
+        }
+      `}</style>
+
       {/* Document Header */}
-      <div style={{ borderBottom: "2px solid #0f172a", paddingBottom: "8px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div style={{ borderBottom: "2px solid #0f172a", paddingBottom: "6px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", breakInside: "avoid", pageBreakInside: "avoid" }}>
         <div>
           <div style={{ fontSize: "9pt", fontWeight: "bold", color: "#475569" }}>社会福祉法人 桃の郷 京都東山</div>
-          <h1 style={{ fontSize: "16pt", fontWeight: "900", color: "#0f172a", margin: "2px 0 4px 0" }}>
+          <h1 style={{ fontSize: "15pt", fontWeight: "900", color: "#0f172a", margin: "2px 0 4px 0" }}>
             {printTarget === "bcp" ? "【施設・非常災害用】BCP備蓄品・衛生消耗品 在庫管理一覧表"
               : printTarget === "diaper" ? "【利用者販売用】衛生商品・おむつ類 在庫管理一覧表"
               : printTarget === "history" ? "【出庫記録】物品・備品・衛生用品 出庫履歴総合管理台帳"
@@ -5834,22 +5879,22 @@ export default function App() {
         </div>
 
         {printIncludeStamp && (
-          <div style={{ display: "flex", border: "1px solid #475569", fontSize: "8pt", textAlign: "center" }}>
+          <div style={{ display: "flex", border: "1px solid #475569", fontSize: "8pt", textAlign: "center", breakInside: "avoid", pageBreakInside: "avoid" }}>
             <div style={{ borderRight: "1px solid #475569", width: "55px" }}>
               <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>施設長</div>
-              <div style={{ height: "40px" }}></div>
+              <div style={{ height: "36px" }}></div>
             </div>
             <div style={{ borderRight: "1px solid #475569", width: "55px" }}>
               <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>管理者</div>
-              <div style={{ height: "40px" }}></div>
+              <div style={{ height: "36px" }}></div>
             </div>
             <div style={{ borderRight: "1px solid #475569", width: "55px" }}>
               <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>衛生管理</div>
-              <div style={{ height: "40px" }}></div>
+              <div style={{ height: "36px" }}></div>
             </div>
             <div style={{ width: "55px" }}>
               <div style={{ background: "#f1f5f9", borderBottom: "1px solid #475569", padding: "2px 0", fontWeight: "bold" }}>担当者</div>
-              <div style={{ height: "40px" }}></div>
+              <div style={{ height: "36px" }}></div>
             </div>
           </div>
         )}
@@ -5857,11 +5902,11 @@ export default function App() {
 
       {/* BCP Table */}
       {(printTarget === "bcp" || printTarget === "all") && (
-        <div style={{ marginBottom: printTarget === "all" ? "18px" : "0" }} className="print-avoid-break">
-          <div style={{ fontSize: "11pt", fontWeight: "bold", color: "#1e3a8a", marginBottom: "4px" }}>
+        <div style={{ marginBottom: printTarget === "all" ? "14px" : "0", breakInside: "auto", pageBreakInside: "auto" }}>
+          <div className="print-section-header" style={{ fontSize: "10.5pt", fontWeight: "bold", color: "#1e3a8a", marginBottom: "4px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ 【施設・非常災害用】BCP備蓄品・衛生消耗品リスト ({printableStockpiles.length}品目)
           </div>
-          <table>
+          <table style={{ width: "100%", borderCollapse: "collapse", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
               <tr>
                 <th style={{ width: "30px", textAlign: "center" }}>No</th>
@@ -5898,11 +5943,11 @@ export default function App() {
 
       {/* Diaper / Products Table */}
       {(printTarget === "diaper" || printTarget === "all") && (
-        <div className={printTarget === "all" ? "print-page-break" : ""}>
-          <div style={{ fontSize: "11pt", fontWeight: "bold", color: "#115e59", marginBottom: "4px" }}>
+        <div className={printTarget === "all" ? "print-page-break" : ""} style={{ breakInside: "auto", pageBreakInside: "auto" }}>
+          <div className="print-section-header" style={{ fontSize: "10.5pt", fontWeight: "bold", color: "#115e59", marginBottom: "4px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ 【利用者販売用】衛生商品・おむつ類マスタ一覧 ({printableProducts.length}品目)
           </div>
-          <table>
+          <table style={{ width: "100%", borderCollapse: "collapse", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
               <tr>
                 <th style={{ width: "30px", textAlign: "center" }}>No</th>
@@ -5944,11 +5989,11 @@ export default function App() {
 
       {/* History Records Table in Printable Layout */}
       {printTarget === "history" && (
-        <div>
-          <div style={{ fontSize: "11pt", fontWeight: "bold", color: "#b45309", marginBottom: "4px" }}>
+        <div style={{ breakInside: "auto", pageBreakInside: "auto" }}>
+          <div className="print-section-header" style={{ fontSize: "10.5pt", fontWeight: "bold", color: "#b45309", marginBottom: "4px", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
             ■ 出庫記録台帳（スマホ出庫①利用者販売 ＆ スマホ出庫②施設・BCP出庫 統合管理）({printableHistory.length}件)
           </div>
-          <table>
+          <table style={{ width: "100%", borderCollapse: "collapse", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
               <tr>
                 <th style={{ width: "30px", textAlign: "center" }}>No</th>
