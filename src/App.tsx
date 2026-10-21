@@ -261,6 +261,21 @@ export default function App() {
   const [printIncludeStamp, setPrintIncludeStamp] = useState(true);
   const [printOrientation, setPrintOrientation] = useState<"landscape" | "portrait">("landscape");
   const [printDensity, setPrintDensity] = useState<"normal" | "compact" | "spacious">("normal");
+  const [printMarginPreset, setPrintMarginPreset] = useState<"standard" | "narrow" | "wide" | "custom">("standard");
+  const [printMarginTop, setPrintMarginTop] = useState<number>(8);
+  const [printMarginBottom, setPrintMarginBottom] = useState<number>(8);
+  const [printMarginLeft, setPrintMarginLeft] = useState<number>(8);
+  const [printMarginRight, setPrintMarginRight] = useState<number>(8);
+
+  const formatCategoryBadge = (category: string) => {
+    if (!category) return "①";
+    if (category.startsWith("①") || category.includes("①") || category.includes("日常業務")) return "①";
+    if (category.startsWith("②") || category.includes("②") || category.includes("BCP") || category.includes("感染症")) return "②";
+    if (category.startsWith("③") || category.includes("③") || category.includes("消耗品")) return "③";
+    if (category.startsWith("④") || category.includes("④") || category.includes("デイ")) return "④";
+    const m = category.match(/[①②③④⑤⑥⑦⑧⑨⑩]/);
+    return m ? m[0] : "①";
+  };
 
   // Form States - Helper Withdrawal (Dynamic autocomplete)
   const [userInput, setUserInput] = useState("");
@@ -5634,8 +5649,116 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                  {/* 5. Stamp Box Checkbox */}
+                {/* 5. Margin Manual Adjustment Controls */}
+                <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="font-bold text-slate-800 flex items-center gap-2">
+                      <span>📐 ⑤ 印刷用紙の余白設定（手動調整対応）:</span>
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                        上 {printMarginTop}mm ｜ 下 {printMarginBottom}mm ｜ 左右 {printMarginLeft}mm
+                      </span>
+                    </div>
+                    {/* Quick Presets */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[10px] text-slate-500">プリセット:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrintMarginPreset("standard");
+                          setPrintMarginTop(8);
+                          setPrintMarginBottom(8);
+                          setPrintMarginLeft(8);
+                          setPrintMarginRight(8);
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                          printMarginTop === 8 && printMarginLeft === 8
+                            ? "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                        }`}
+                      >
+                        標準 (8mm)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrintMarginPreset("narrow");
+                          setPrintMarginTop(5);
+                          setPrintMarginBottom(5);
+                          setPrintMarginLeft(5);
+                          setPrintMarginRight(5);
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                          printMarginTop === 5 && printMarginLeft === 5
+                            ? "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                        }`}
+                      >
+                        狭い・最大幅 (5mm)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrintMarginPreset("wide");
+                          setPrintMarginTop(12);
+                          setPrintMarginBottom(12);
+                          setPrintMarginLeft(12);
+                          setPrintMarginRight(12);
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                          printMarginTop === 12 && printMarginLeft === 12
+                            ? "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                        }`}
+                      >
+                        ゆったり・綴じ代 (12mm)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Margin Fine Sliders */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-semibold text-slate-600 w-20 shrink-0">上下余白:</span>
+                      <input
+                        type="range"
+                        min="3"
+                        max="25"
+                        step="1"
+                        value={printMarginTop}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setPrintMarginTop(val);
+                          setPrintMarginBottom(val);
+                          setPrintMarginPreset("custom");
+                        }}
+                        className="flex-1 accent-indigo-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                      />
+                      <span className="text-xs font-mono font-bold text-slate-800 w-12 text-right">{printMarginTop} mm</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-semibold text-slate-600 w-20 shrink-0">左右余白:</span>
+                      <input
+                        type="range"
+                        min="3"
+                        max="25"
+                        step="1"
+                        value={printMarginLeft}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setPrintMarginLeft(val);
+                          setPrintMarginRight(val);
+                          setPrintMarginPreset("custom");
+                        }}
+                        className="flex-1 accent-indigo-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                      />
+                      <span className="text-xs font-mono font-bold text-slate-800 w-12 text-right">{printMarginLeft} mm</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-1 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                  {/* Stamp Box Checkbox */}
                   <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white cursor-pointer select-none font-semibold text-slate-700 hover:bg-slate-50 transition">
                     <input
                       type="checkbox"
@@ -5647,16 +5770,26 @@ export default function App() {
                   </label>
 
                   {/* Clarification Tag */}
-                  <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md">
-                    ✓ 1枚目のタイトル直後から表が配置され、複数ページにまたがっても項目名が自動で引き継がれます
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                    <span className="text-blue-700 font-bold bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                      ✓ 「出庫カテゴリ」を①/②に省スペース化 ＆ 「品目名」を2倍に拡大 ＆ 「備考」をワイド表示
+                    </span>
+                    <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                      ✓ 1枚目から綺麗に表が配置されます
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Document Live Preview Box */}
               <div className="border border-slate-300 rounded-xl overflow-hidden shadow-inner bg-slate-100 p-3">
-                <div className="text-[11px] font-bold text-slate-500 mb-2 flex items-center justify-between">
-                  <span>📄 帳票プレビュー（A4{printOrientation === "landscape" ? "横向き" : "縦向き"}・印字イメージ）:</span>
+                <div className="text-[11px] font-bold text-slate-500 mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span>📄 帳票プレビュー（A4{printOrientation === "landscape" ? "横向き" : "縦向き"}・印字イメージ）:</span>
+                    <span className="text-[10px] bg-slate-200 text-slate-700 font-mono px-2 py-0.5 rounded">
+                      余白: 上下 {printMarginTop}mm / 左右 {printMarginLeft}mm
+                    </span>
+                  </div>
                   <span>対象品目数: {
                     printTarget === "bcp" ? printableStockpiles.length
                     : printTarget === "diaper" ? printableProducts.length
@@ -5664,7 +5797,12 @@ export default function App() {
                   }品目</span>
                 </div>
 
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 max-h-[36vh] overflow-y-auto text-[11px] space-y-3 font-sans">
+                <div
+                  className="bg-white rounded-lg shadow-sm border border-slate-200 max-h-[38vh] overflow-y-auto text-[11px] space-y-3 font-sans transition-all"
+                  style={{
+                    padding: `${Math.max(10, printMarginTop * 1.5)}px ${Math.max(12, printMarginLeft * 1.5)}px ${Math.max(10, printMarginBottom * 1.5)}px ${Math.max(12, printMarginLeft * 1.5)}px`
+                  }}
+                >
                   {/* Preview Header */}
                   <div className="border-b-2 border-slate-800 pb-2 flex items-start justify-between">
                     <div>
@@ -5694,31 +5832,33 @@ export default function App() {
                       <table className="w-full border-collapse text-[10px]">
                         <thead>
                           <tr className="bg-slate-100 border border-slate-300">
-                            <th className="p-1 border border-slate-300 text-center w-8">No</th>
-                            <th className="p-1 border border-slate-300">出庫カテゴリ</th>
-                            <th className="p-1 border border-slate-300">品目（備蓄品名）</th>
-                            <th className="p-1 border border-slate-300 text-center">現在庫</th>
-                            <th className="p-1 border border-slate-300 text-center">必要量</th>
-                            <th className="p-1 border border-slate-300">保管場所</th>
-                            <th className="p-1 border border-slate-300 text-center">状況</th>
-                            <th className="p-1 border border-slate-300">備考</th>
+                            <th className="p-1 border border-slate-300 text-center w-7">No</th>
+                            <th className="p-1 border border-slate-300 text-center w-8" title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
+                            <th className="p-1 border border-slate-300 font-bold text-left min-w-[200px]">品目（備蓄品名）<span className="text-[9px] text-blue-700 font-normal ml-1">(2倍拡大)</span></th>
+                            <th className="p-1 border border-slate-300 text-center w-12">現在庫</th>
+                            <th className="p-1 border border-slate-300 text-center w-12">必要量</th>
+                            <th className="p-1 border border-slate-300 text-left w-20">保管場所</th>
+                            <th className="p-1 border border-slate-300 text-center w-12">状況</th>
+                            <th className="p-1 border border-slate-300 text-left">備考 (ワイド表示)</th>
                           </tr>
                         </thead>
                         <tbody>
                           {printableStockpiles.slice(0, 15).map((s, idx) => (
                             <tr key={s.id} className="border-b border-slate-200">
-                              <td className="p-1 border border-slate-200 text-center">{idx + 1}</td>
-                              <td className="p-1 border border-slate-200">{s.category}</td>
-                              <td className="p-1 border border-slate-200 font-bold">{s.name}</td>
-                              <td className={`p-1 border border-slate-200 text-center font-bold ${s.currentStock <= 1 ? "text-rose-600" : ""}`}>
+                              <td className="p-1 border border-slate-200 text-center text-slate-500">{idx + 1}</td>
+                              <td className="p-1 border border-slate-200 text-center font-bold text-blue-900 text-xs">
+                                {formatCategoryBadge(s.category)}
+                              </td>
+                              <td className="p-1 border border-slate-200 font-bold text-slate-900">{s.name}</td>
+                              <td className={`p-1 border border-slate-200 text-center font-bold whitespace-nowrap ${s.currentStock <= 1 ? "text-rose-600" : ""}`}>
                                 {s.currentStock} {s.unit}
                               </td>
-                              <td className="p-1 border border-slate-200 text-center">{s.requiredStock} {s.unit}</td>
-                              <td className="p-1 border border-slate-200">{s.location}</td>
-                              <td className="p-1 border border-slate-200 text-center font-bold">
-                                {s.currentStock <= 1 ? "⚠️要補充" : "適正"}
+                              <td className="p-1 border border-slate-200 text-center whitespace-nowrap">{s.requiredStock} {s.unit}</td>
+                              <td className="p-1 border border-slate-200 truncate max-w-[90px]">{s.location}</td>
+                              <td className="p-1 border border-slate-200 text-center font-bold whitespace-nowrap">
+                                {s.currentStock <= 1 ? <span className="text-rose-600">要補充</span> : <span className="text-emerald-700">適正</span>}
                               </td>
-                              <td className="p-1 border border-slate-200 truncate max-w-[120px]">{s.notes || "-"}</td>
+                              <td className="p-1 border border-slate-200 text-slate-600">{s.notes || "-"}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -5853,7 +5993,7 @@ export default function App() {
         @media print {
           @page {
             size: A4 ${printOrientation};
-            margin: 8mm 8mm 10mm 8mm;
+            margin: ${printMarginTop}mm ${printMarginRight}mm ${printMarginBottom}mm ${printMarginLeft}mm;
           }
         }
       `}</style>
@@ -5909,31 +6049,33 @@ export default function App() {
           <table style={{ width: "100%", borderCollapse: "collapse", breakInside: "auto", pageBreakInside: "auto" }}>
             <thead>
               <tr>
-                <th style={{ width: "30px", textAlign: "center" }}>No</th>
-                <th style={{ width: "170px" }}>出庫カテゴリ</th>
-                <th>品目（備蓄品名）</th>
-                <th style={{ width: "85px", textAlign: "center" }}>現在庫数</th>
-                <th style={{ width: "85px", textAlign: "center" }}>必要備蓄量</th>
-                <th style={{ width: "100px" }}>保管場所</th>
-                <th style={{ width: "70px", textAlign: "center" }}>状況</th>
-                <th style={{ width: "160px" }}>備考</th>
+                <th style={{ width: "26px", textAlign: "center" }}>No</th>
+                <th style={{ width: "36px", textAlign: "center" }} title="出庫区分 (①日常業務用 / ②BCP感染症対策)">区分</th>
+                <th style={{ width: "380px", minWidth: "280px" }}>品目（備蓄品名）</th>
+                <th style={{ width: "55px", textAlign: "center" }}>現在庫</th>
+                <th style={{ width: "55px", textAlign: "center" }}>必要量</th>
+                <th style={{ width: "90px" }}>保管場所</th>
+                <th style={{ width: "48px", textAlign: "center" }}>状況</th>
+                <th>備考</th>
               </tr>
             </thead>
             <tbody>
               {printableStockpiles.map((s, idx) => (
                 <tr key={s.id}>
                   <td style={{ textAlign: "center" }}>{idx + 1}</td>
-                  <td style={{ fontSize: "8pt" }}>{s.category}</td>
-                  <td style={{ fontWeight: "bold" }}>{s.name}</td>
-                  <td style={{ textAlign: "center", fontWeight: "bold", color: s.currentStock <= 1 ? "#dc2626" : "inherit" }}>
+                  <td style={{ textAlign: "center", fontWeight: "bold", fontSize: "10pt", color: "#1e3a8a" }}>
+                    {formatCategoryBadge(s.category)}
+                  </td>
+                  <td style={{ fontWeight: "bold", fontSize: "9pt" }}>{s.name}</td>
+                  <td style={{ textAlign: "center", fontWeight: "bold", fontSize: "8.5pt", whiteSpace: "nowrap", color: s.currentStock <= 1 ? "#dc2626" : "inherit" }}>
                     {s.currentStock} {s.unit}
                   </td>
-                  <td style={{ textAlign: "center" }}>{s.requiredStock} {s.unit}</td>
+                  <td style={{ textAlign: "center", fontSize: "8.5pt", whiteSpace: "nowrap" }}>{s.requiredStock} {s.unit}</td>
                   <td>{s.location}</td>
-                  <td style={{ textAlign: "center", fontWeight: "bold", color: s.currentStock <= 1 ? "#dc2626" : "#166534" }}>
-                    {s.currentStock <= 1 ? "⚠️要補充" : "適正"}
+                  <td style={{ textAlign: "center", fontWeight: "bold", fontSize: "8pt", whiteSpace: "nowrap", color: s.currentStock <= 1 ? "#dc2626" : "#166534" }}>
+                    {s.currentStock <= 1 ? "要補充" : "適正"}
                   </td>
-                  <td style={{ fontSize: "8pt" }}>{s.notes || "-"}</td>
+                  <td style={{ fontSize: "8pt", color: "#334155" }}>{s.notes || "-"}</td>
                 </tr>
               ))}
             </tbody>
@@ -6034,7 +6176,6 @@ export default function App() {
       {/* Print Document Footer */}
       <div style={{ marginTop: "12px", borderTop: "1px solid #cbd5e1", paddingTop: "4px", display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b" }}>
         <div>社会福祉法人 桃の郷 京都東山 衛生用品＆備蓄 在庫管理システム</div>
-        <div>※ 本帳票は公的監査・備蓄定期点検・受発注管理の記録台帳としてご利用いただけます</div>
         <div>出力日: {new Date().toLocaleDateString("ja-JP")}</div>
       </div>
     </div>
